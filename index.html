@@ -3,7 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AgriIsoko | Bridging the Agricultural Gap</title>
+    <title>AgriIsoko | Smart Agriculture Marketplace</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/188/188333.png">
+    
+    <!-- Tailwind & Fonts -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
@@ -12,456 +17,321 @@
         :root {
             --agri-green: #16A34A;
             --agri-black: #000000;
-            --agri-white: #FFFFFF;
         }
 
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: var(--agri-white);
+            background-color: #FFFFFF;
             color: var(--agri-black);
             scroll-behavior: smooth;
         }
 
-        .active-link {
-            color: var(--agri-green);
-            font-weight: 700;
+        .hero-gradient {
+            background: radial-gradient(circle at top right, #f0fdf4 0%, #ffffff 50%);
         }
 
-        .fade-in {
-            animation: fadeIn 0.5s ease-out;
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+        .nav-link {
+            position: relative;
         }
-
-        .glass-card {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(0, 0, 0, 0.05);
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -4px;
+            left: 0;
+            background-color: var(--agri-green);
+            transition: width 0.3s ease;
         }
-
-        .section-padding {
-            padding: 100px 0;
+        .nav-link:hover::after {
+            width: 100%;
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col">
+<body class="antialiased">
 
-    <!-- Sticky Navigation -->
-    <nav class="bg-white/90 backdrop-blur-md border-b border-gray-100 sticky top-0 z-50">
+    <!-- Navbar -->
+    <nav class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-20 items-center">
-                <div class="flex items-center cursor-pointer" onclick="navigateTo('home')">
+                <div class="flex items-center">
                     <div class="bg-black p-2 rounded-lg mr-2">
                         <i class="fas fa-leaf text-green-500 text-xl"></i>
                     </div>
                     <span class="text-2xl font-extrabold tracking-tighter uppercase">Agri<span class="text-green-600">Isoko</span></span>
                 </div>
                 
+                <!-- Navigation Links -->
                 <div class="hidden md:flex space-x-10 items-center">
-                    <a href="#about" class="text-sm font-bold uppercase tracking-wider hover:text-green-600 transition">About</a>
-                    <a href="#how-it-works" class="text-sm font-bold uppercase tracking-wider hover:text-green-600 transition">Process</a>
-                    <a href="#impact" class="text-sm font-bold uppercase tracking-wider hover:text-green-600 transition">Impact</a>
-                    <button onclick="navigateTo('marketplace')" class="text-sm font-bold uppercase tracking-wider hover:text-green-600 transition">Marketplace</button>
-                    <button onclick="navigateTo('login')" class="bg-black text-white px-6 py-2.5 rounded-full font-bold hover:bg-green-600 transition">Sign In</button>
+                    <a href="#about" class="nav-link text-sm font-bold uppercase tracking-wider text-gray-600 hover:text-black transition">About</a>
+                    <a href="#solutions" class="nav-link text-sm font-bold uppercase tracking-wider text-gray-600 hover:text-black transition">Solutions</a>
+                    <a href="#how-it-works" class="nav-link text-sm font-bold uppercase tracking-wider text-gray-600 hover:text-black transition">How it Works</a>
+                    <a href="#marketplace" class="nav-link text-sm font-bold uppercase tracking-wider text-gray-600 hover:text-black transition">Market</a>
+                    <a href="#login" class="bg-black text-white px-8 py-3 rounded-full font-bold text-sm hover:bg-green-600 transition shadow-lg">Sign In</a>
                 </div>
 
                 <div class="md:hidden">
-                    <button id="mobile-menu-btn" class="text-black p-2"><i class="fas fa-bars text-2xl"></i></button>
+                    <button id="menu-toggle" class="text-black p-2"><i class="fas fa-bars text-2xl"></i></button>
                 </div>
             </div>
-        </div>
-        <div id="mobile-menu" class="hidden md:hidden bg-white border-b px-4 py-6 space-y-4">
-            <a href="#about" class="block font-bold">About Us</a>
-            <a href="#how-it-works" class="block font-bold">How it Works</a>
-            <button onclick="navigateTo('marketplace')" class="block font-bold">Marketplace</button>
-            <button onclick="navigateTo('login')" class="w-full bg-black text-white py-3 rounded-xl font-bold">Login</button>
         </div>
     </nav>
 
-    <!-- Main Viewport -->
-    <main id="app-viewport">
-        <!-- Home View (default) -->
-    </main>
+    <!-- Hero Section -->
+    <section class="hero-gradient pt-20 pb-32 overflow-hidden">
+        <div class="max-w-7xl mx-auto px-4 lg:px-8 flex flex-col lg:flex-row items-center gap-16">
+            <div class="flex-1 text-center lg:text-left">
+                <span class="inline-block bg-green-100 text-green-700 px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest mb-6">Empowering African Agriculture</span>
+                <h1 class="text-6xl lg:text-8xl font-black leading-[0.9] tracking-tighter mb-8">
+                    Farm Fresh. <br><span class="text-green-600">Digital Direct.</span>
+                </h1>
+                <p class="text-xl text-gray-600 mb-10 leading-relaxed max-w-xl mx-auto lg:mx-0">
+                    AgriIsoko is the premier B2B platform connecting smallholder farmers to commercial markets. We optimize logistics, guarantee fair pricing, and eliminate waste.
+                </p>
+                <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                    <a href="#signup" class="bg-black text-white px-10 py-5 rounded-2xl font-bold text-lg hover:bg-green-600 transition shadow-2xl flex items-center justify-center">
+                        Join the Network <i class="fas fa-arrow-right ml-3"></i>
+                    </a>
+                    <a href="#marketplace" class="bg-white text-black border-2 border-black px-10 py-5 rounded-2xl font-bold text-lg hover:bg-gray-50 transition flex items-center justify-center">
+                        View Marketplace
+                    </a>
+                </div>
+            </div>
+            <div class="flex-1 relative">
+                <div class="relative z-10 bg-white p-8 rounded-[3rem] shadow-2xl border border-gray-100">
+                    <div class="flex justify-between items-center mb-8">
+                        <h3 class="font-black text-2xl">Market Pulse</h3>
+                        <span class="text-green-600 font-bold bg-green-50 px-3 py-1 rounded-lg text-sm">Live</span>
+                    </div>
+                    <div class="space-y-6">
+                        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+                            <div class="flex items-center gap-4">
+                                <span class="text-3xl">🌽</span>
+                                <div><p class="font-bold">Yellow Maize</p><p class="text-xs text-gray-500">14 Active Supplies</p></div>
+                            </div>
+                            <p class="font-black text-green-600">$0.45/kg</p>
+                        </div>
+                        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
+                            <div class="flex items-center gap-4">
+                                <span class="text-3xl">🥑</span>
+                                <div><p class="font-bold">Hass Avocado</p><p class="text-xs text-gray-500">8 Verified Farms</p></div>
+                            </div>
+                            <p class="font-black text-green-600">$1.20/kg</p>
+                        </div>
+                    </div>
+                </div>
+                <!-- Decorative Circle -->
+                <div class="absolute -bottom-10 -right-10 w-64 h-64 bg-green-600 rounded-full -z-10 opacity-10 blur-3xl"></div>
+            </div>
+        </div>
+    </section>
 
-    <!-- Detailed Footer -->
-    <footer id="main-footer" class="bg-black text-white pt-20 pb-10">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
-                <div class="col-span-1 md:col-span-1">
-                    <div class="flex items-center mb-6">
-                        <i class="fas fa-leaf text-green-500 mr-2 text-2xl"></i>
-                        <span class="text-2xl font-black uppercase">Agri<span class="text-green-500">Isoko</span></span>
+    <!-- Mission Section -->
+    <section id="about" class="py-32 bg-black text-white">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col lg:flex-row gap-20 items-center">
+            <div class="lg:w-1/2">
+                <h2 class="text-4xl lg:text-6xl font-black uppercase leading-none mb-8">Our Mission to <span class="text-green-500 underline decoration-white">Zero Waste</span>.</h2>
+                <p class="text-gray-400 text-lg leading-relaxed mb-8">
+                    Agriculture is the backbone of the economy, yet farmers suffer the most from post-harvest losses. AgriIsoko was built to solve the "Logistics Gap" by providing real-time data to farmers, allowing them to sell crops before they are even harvested.
+                </p>
+                <div class="grid grid-cols-2 gap-8">
+                    <div>
+                        <p class="text-4xl font-black text-green-500">95%</p>
+                        <p class="text-sm font-bold uppercase tracking-widest mt-2">Delivery Success</p>
                     </div>
-                    <p class="text-gray-400 text-sm leading-relaxed mb-6">
-                        Revolutionizing the agricultural supply chain by creating a transparent, digital-first marketplace for African farmers and global distributors.
-                    </p>
-                    <div class="flex space-x-4">
-                        <a href="#" class="text-gray-400 hover:text-green-500 text-xl"><i class="fab fa-linkedin"></i></a>
-                        <a href="#" class="text-gray-400 hover:text-green-500 text-xl"><i class="fab fa-instagram"></i></a>
-                        <a href="#" class="text-gray-400 hover:text-green-500 text-xl"><i class="fab fa-whatsapp"></i></a>
-                    </div>
-                </div>
-                <div>
-                    <h4 class="font-bold text-lg mb-6">Navigation</h4>
-                    <ul class="space-y-4 text-gray-400 text-sm">
-                        <li><a href="#about" class="hover:text-white transition">About AgriIsoko</a></li>
-                        <li><a href="#how-it-works" class="hover:text-white transition">The Supply Chain</a></li>
-                        <li><a href="#impact" class="hover:text-white transition">Success Stories</a></li>
-                        <li><a href="#faq" class="hover:text-white transition">Common Questions</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 class="font-bold text-lg mb-6">Roles</h4>
-                    <ul class="space-y-4 text-gray-400 text-sm">
-                        <li><button onclick="navigateTo('signup')" class="hover:text-white transition">Join as a Farmer</button></li>
-                        <li><button onclick="navigateTo('signup')" class="hover:text-white transition">Apply as Distributor</button></li>
-                        <li><button onclick="navigateTo('signup')" class="hover:text-white transition">Register a Market</button></li>
-                        <li><button onclick="navigateTo('login')" class="hover:text-white transition">Admin Portal</button></li>
-                    </ul>
-                </div>
-                <div>
-                    <h4 class="font-bold text-lg mb-6">Contact Support</h4>
-                    <p class="text-gray-400 text-sm mb-4">Have questions? Reach out to our 24/7 support team.</p>
-                    <div class="flex items-center text-green-500 font-bold mb-2">
-                        <i class="fas fa-envelope mr-2"></i> help@agriisoko.com
-                    </div>
-                    <div class="flex items-center text-green-500 font-bold">
-                        <i class="fas fa-phone mr-2"></i> +250 788 000 000
+                    <div>
+                        <p class="text-4xl font-black text-green-500">24h</p>
+                        <p class="text-sm font-bold uppercase tracking-widest mt-2">Payout Speed</p>
                     </div>
                 </div>
             </div>
-            <div class="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center text-gray-500 text-xs">
-                <p>&copy; 2025 AgriIsoko. All Rights Reserved. Built for high-impact agriculture.</p>
-                <div class="flex space-x-6 mt-4 md:mt-0">
-                    <a href="#" class="hover:text-white">Privacy</a>
-                    <a href="#" class="hover:text-white">Terms</a>
-                    <a href="#" class="hover:text-white">Compliance</a>
+            <div class="lg:w-1/2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-gray-900 p-8 rounded-3xl border border-gray-800">
+                    <i class="fas fa-shield-alt text-3xl text-green-500 mb-4"></i>
+                    <h4 class="font-bold text-xl mb-2">Verified Sourcing</h4>
+                    <p class="text-gray-500 text-sm">Every farm is inspected and verified for quality standards.</p>
+                </div>
+                <div class="bg-gray-900 p-8 rounded-3xl border border-gray-800">
+                    <i class="fas fa-route text-3xl text-green-500 mb-4"></i>
+                    <h4 class="font-bold text-xl mb-2">Smart Logistics</h4>
+                    <p class="text-gray-500 text-sm">AI-driven route planning for our distributor network.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Role Solutions -->
+    <section id="solutions" class="py-32 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 text-center mb-20">
+            <h2 class="text-4xl lg:text-5xl font-black uppercase mb-4 tracking-tighter">Who is AgriIsoko For?</h2>
+            <p class="text-gray-600 max-w-2xl mx-auto">We've built specialized tools for every pillar of the agricultural economy.</p>
+        </div>
+        <div class="max-w-7xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8">
+            <!-- Farmer -->
+            <div class="bg-white p-10 rounded-[2.5rem] border border-gray-100 shadow-sm feature-card transition-all duration-300">
+                <div class="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mb-8">
+                    <i class="fas fa-seedling text-2xl text-green-600"></i>
+                </div>
+                <h3 class="text-2xl font-black mb-4 uppercase">For Farmers</h3>
+                <p class="text-gray-500 text-sm mb-8 leading-relaxed">Access real-time market prices, list your upcoming harvests, and receive direct payments without middle-men.</p>
+                <a href="#farmer-info" class="font-bold text-green-600 hover:text-black transition flex items-center">Learn More <i class="fas fa-chevron-right ml-2 text-xs"></i></a>
+            </div>
+            <!-- Distributor -->
+            <div class="bg-white p-10 rounded-[2.5rem] border border-gray-100 shadow-sm feature-card transition-all duration-300">
+                <div class="w-16 h-16 bg-black rounded-2xl flex items-center justify-center mb-8">
+                    <i class="fas fa-truck text-2xl text-white"></i>
+                </div>
+                <h3 class="text-2xl font-black mb-4 uppercase">For Distributors</h3>
+                <p class="text-gray-500 text-sm mb-8 leading-relaxed">Optimize your fleet routes, aggregate produce from multiple small farms, and manage delivery proof digitally.</p>
+                <a href="#distributor-info" class="font-bold text-black hover:text-green-600 transition flex items-center">Learn More <i class="fas fa-chevron-right ml-2 text-xs"></i></a>
+            </div>
+            <!-- Market -->
+            <div class="bg-white p-10 rounded-[2.5rem] border border-gray-100 shadow-sm feature-card transition-all duration-300">
+                <div class="w-16 h-16 bg-green-600 rounded-2xl flex items-center justify-center mb-8">
+                    <i class="fas fa-store text-2xl text-white"></i>
+                </div>
+                <h3 class="text-2xl font-black mb-4 uppercase">For Markets</h3>
+                <p class="text-gray-500 text-sm mb-8 leading-relaxed">Source high-quality produce at wholesale prices. Track your orders from farm-gate to your storefront.</p>
+                <a href="#market-info" class="font-bold text-green-600 hover:text-black transition flex items-center">Learn More <i class="fas fa-chevron-right ml-2 text-xs"></i></a>
+            </div>
+        </div>
+    </section>
+
+    <!-- How it Works (Steps) -->
+    <section id="how-it-works" class="py-32 bg-white border-t">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+                <div>
+                    <h2 class="text-4xl lg:text-5xl font-black uppercase mb-8 leading-tight">Simple. <br>Transparent. <br><span class="text-green-600">Connected.</span></h2>
+                    <div class="space-y-12">
+                        <div class="flex gap-6">
+                            <div class="flex-shrink-0 w-12 h-12 bg-black text-white rounded-full flex items-center justify-center font-black">01</div>
+                            <div>
+                                <h4 class="font-black text-xl mb-2">Register & Verify</h4>
+                                <p class="text-gray-500">Sign up based on your role and upload necessary compliance documents for instant verification.</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-6">
+                            <div class="flex-shrink-0 w-12 h-12 bg-black text-white rounded-full flex items-center justify-center font-black">02</div>
+                            <div>
+                                <h4 class="font-black text-xl mb-2">Trade & Match</h4>
+                                <p class="text-gray-500">Farmers list produce; Markets buy; Our system matches the best logistics route automatically.</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-6">
+                            <div class="flex-shrink-0 w-12 h-12 bg-black text-white rounded-full flex items-center justify-center font-black">03</div>
+                            <div>
+                                <h4 class="font-black text-xl mb-2">Secure Settlement</h4>
+                                <p class="text-gray-500">Upon successful delivery confirmation, payments are released instantly to your digital wallet.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-100 rounded-[3rem] p-4">
+                    <div class="bg-white rounded-[2.5rem] shadow-2xl overflow-hidden">
+                        <div class="bg-black p-6 text-white flex justify-between items-center">
+                            <span class="font-bold uppercase tracking-widest text-xs">Order Tracking</span>
+                            <i class="fas fa-ellipsis-h"></i>
+                        </div>
+                        <div class="p-8 space-y-6">
+                            <div class="flex items-center gap-4">
+                                <div class="w-2 bg-green-500 h-10 rounded-full"></div>
+                                <div><p class="font-bold text-sm">Harvest Confirmed</p><p class="text-[10px] text-gray-400">10:45 AM</p></div>
+                            </div>
+                            <div class="flex items-center gap-4">
+                                <div class="w-2 bg-green-500 h-10 rounded-full"></div>
+                                <div><p class="font-bold text-sm">Picked up by Logistics</p><p class="text-[10px] text-gray-400">02:30 PM</p></div>
+                            </div>
+                            <div class="flex items-center gap-4 opacity-30">
+                                <div class="w-2 bg-gray-300 h-10 rounded-full"></div>
+                                <div><p class="font-bold text-sm">Market Delivery</p><p class="text-[10px] text-gray-400">Estimated 06:00 PM</p></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Impact/CTA -->
+    <section class="py-24 bg-green-600">
+        <div class="max-w-4xl mx-auto px-4 text-center">
+            <h2 class="text-4xl lg:text-6xl font-black text-white mb-10 leading-none">Ready to transform your agricultural business?</h2>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="#signup" class="bg-black text-white px-12 py-5 rounded-2xl font-black text-xl hover:scale-105 transition shadow-2xl">Get Started Now</a>
+                <a href="#contact" class="bg-white text-black px-12 py-5 rounded-2xl font-black text-xl hover:bg-gray-100 transition shadow-xl">Contact Sales</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-white pt-20 pb-10 border-t border-gray-100">
+        <div class="max-w-7xl mx-auto px-4 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-12 mb-16">
+                <div class="col-span-1 md:col-span-1">
+                    <div class="flex items-center mb-6">
+                        <i class="fas fa-leaf text-green-600 mr-2 text-2xl"></i>
+                        <span class="text-2xl font-black uppercase">Agri<span class="text-green-600">Isoko</span></span>
+                    </div>
+                    <p class="text-gray-500 text-sm leading-relaxed">
+                        Connecting the dots in the agricultural value chain. Building the digital infrastructure for the future of farming.
+                    </p>
+                </div>
+                <div>
+                    <h5 class="font-black text-sm uppercase tracking-widest mb-6">Platform</h5>
+                    <ul class="space-y-4 text-sm text-gray-600 font-medium">
+                        <li><a href="#marketplace" class="hover:text-green-600 transition">Marketplace</a></li>
+                        <li><a href="#logistics" class="hover:text-green-600 transition">Logistics Network</a></li>
+                        <li><a href="#pricing" class="hover:text-green-600 transition">Pricing Trends</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h5 class="font-black text-sm uppercase tracking-widest mb-6">Company</h5>
+                    <ul class="space-y-4 text-sm text-gray-600 font-medium">
+                        <li><a href="#about" class="hover:text-green-600 transition">About Us</a></li>
+                        <li><a href="#careers" class="hover:text-green-600 transition">Impact Stories</a></li>
+                        <li><a href="#contact" class="hover:text-green-600 transition">Contact</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h5 class="font-black text-sm uppercase tracking-widest mb-6">Support</h5>
+                    <ul class="space-y-4 text-sm text-gray-600 font-medium">
+                        <li><a href="#faq" class="hover:text-green-600 transition">FAQ</a></li>
+                        <li><a href="#privacy" class="hover:text-green-600 transition">Privacy Policy</a></li>
+                        <li><a href="#terms" class="hover:text-green-600 transition">Terms of Service</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-100 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+                <p class="text-gray-400 text-xs font-bold">&copy; 2025 AgriIsoko Platform. All Rights Reserved.</p>
+                <div class="flex space-x-6">
+                    <a href="#" class="text-gray-400 hover:text-black"><i class="fab fa-twitter"></i></a>
+                    <a href="#" class="text-gray-400 hover:text-black"><i class="fab fa-linkedin-in"></i></a>
+                    <a href="#" class="text-gray-400 hover:text-black"><i class="fab fa-whatsapp"></i></a>
                 </div>
             </div>
         </div>
     </footer>
 
     <script>
-        const views = {
-            home: `
-                <div class="fade-in">
-                    <!-- Hero -->
-                    <section class="bg-white py-24 border-b">
-                        <div class="max-w-7xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-                            <div>
-                                <div class="inline-flex items-center space-x-2 bg-green-50 text-green-700 px-4 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-widest mb-6">
-                                    <span class="flex h-2 w-2 rounded-full bg-green-600 animate-pulse"></span>
-                                    <span>Now live in 12 regions</span>
-                                </div>
-                                <h1 class="text-6xl md:text-8xl font-black leading-tight mb-8">
-                                    The Future of <br><span class="text-green-600 underline decoration-black">Farm Trade.</span>
-                                </h1>
-                                <p class="text-xl text-gray-600 mb-10 leading-relaxed max-w-xl">
-                                    AgriIsoko is a robust digital ecosystem connecting rural farmers directly to urban markets and verified logistics partners. Zero wastage, fair pricing, and absolute transparency.
-                                </p>
-                                <div class="flex flex-col sm:flex-row gap-5">
-                                    <button onclick="navigateTo('signup')" class="bg-black text-white px-10 py-5 rounded-2xl font-bold text-lg hover:bg-green-600 transition shadow-xl">Start Your Account</button>
-                                    <button onclick="navigateTo('marketplace')" class="bg-white text-black border-2 border-black px-10 py-5 rounded-2xl font-bold text-lg hover:bg-gray-50 transition">Explore Market</button>
-                                </div>
-                            </div>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="bg-green-100 rounded-[3rem] p-8 h-80 flex flex-col justify-end">
-                                    <i class="fas fa-seedling text-5xl text-green-600 mb-4"></i>
-                                    <h3 class="font-black text-2xl leading-none">50k+<br>Farmers</h3>
-                                </div>
-                                <div class="bg-black rounded-[3rem] p-8 h-80 flex flex-col justify-end text-white translate-y-12">
-                                    <i class="fas fa-truck text-5xl text-green-500 mb-4"></i>
-                                    <h3 class="font-black text-2xl leading-none">1.2k<br>Distributors</h3>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- About / Problem Section -->
-                    <section id="about" class="section-padding bg-gray-50">
-                        <div class="max-w-7xl mx-auto px-4">
-                            <div class="flex flex-col md:flex-row justify-between items-end mb-16">
-                                <div class="max-w-2xl">
-                                    <h2 class="text-4xl md:text-5xl font-black mb-6 uppercase">The Problem We Solve</h2>
-                                    <p class="text-lg text-gray-600 italic">"Farmers lose 40% of their harvest due to poor logistics, while markets overpay due to hidden middlemen."</p>
-                                </div>
-                                <div class="hidden md:block bg-green-600 h-1 w-32 mb-4"></div>
-                            </div>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
-                                <div class="space-y-4">
-                                    <h4 class="text-xl font-bold border-l-4 border-green-600 pl-4">Market Inefficiency</h4>
-                                    <p class="text-gray-500">We eliminate the "hidden" agents that drive prices up for buyers and down for producers.</p>
-                                </div>
-                                <div class="space-y-4">
-                                    <h4 class="text-xl font-bold border-l-4 border-black pl-4">Post-Harvest Loss</h4>
-                                    <p class="text-gray-500">Real-time matching with distributors ensures produce leaves the farm within 24 hours of harvest.</p>
-                                </div>
-                                <div class="space-y-4">
-                                    <h4 class="text-xl font-bold border-l-4 border-green-600 pl-4">Financial Inclusion</h4>
-                                    <p class="text-gray-500">Digital records of trades allow farmers to access credit and prove their business viability.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Process Section -->
-                    <section id="how-it-works" class="section-padding bg-white">
-                        <div class="max-w-7xl mx-auto px-4 text-center mb-20">
-                            <h2 class="text-4xl md:text-5xl font-black uppercase mb-4">The AgriIsoko Flow</h2>
-                            <p class="text-gray-600">A seamless transition from soil to shelf.</p>
-                        </div>
-                        <div class="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 relative">
-                            <!-- Visual Connector Line -->
-                            <div class="hidden md:block absolute top-12 left-1/4 right-1/4 h-0.5 bg-gray-200 -z-10"></div>
-                            
-                            <div class="text-center group">
-                                <div class="w-24 h-24 bg-black text-white rounded-full flex items-center justify-center mx-auto mb-6 group-hover:bg-green-600 transition duration-300">
-                                    <i class="fas fa-tractor text-3xl"></i>
-                                </div>
-                                <h3 class="font-black text-xl mb-2">1. Production</h3>
-                                <p class="text-gray-500 text-sm">Farmers list their harvest dates and expected yields via the dashboard.</p>
-                            </div>
-                            <div class="text-center group">
-                                <div class="w-24 h-24 bg-black text-white rounded-full flex items-center justify-center mx-auto mb-6 group-hover:bg-green-600 transition duration-300">
-                                    <i class="fas fa-boxes-stacked text-3xl"></i>
-                                </div>
-                                <h3 class="font-black text-xl mb-2">2. Aggregation</h3>
-                                <p class="text-gray-500 text-sm">Distributors group orders and plan the most efficient pickup routes.</p>
-                            </div>
-                            <div class="text-center group">
-                                <div class="w-24 h-24 bg-black text-white rounded-full flex items-center justify-center mx-auto mb-6 group-hover:bg-green-600 transition duration-300">
-                                    <i class="fas fa-shopping-cart text-3xl"></i>
-                                </div>
-                                <h3 class="font-black text-xl mb-2">3. Marketplace</h3>
-                                <p class="text-gray-500 text-sm">Markets buy verified produce at fair market rates with tracked delivery.</p>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Impact Stories -->
-                    <section id="impact" class="section-padding bg-black text-white overflow-hidden">
-                        <div class="max-w-7xl mx-auto px-4">
-                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
-                                <div>
-                                    <h2 class="text-5xl font-black uppercase mb-8 leading-tight">Changing Lives <br><span class="text-green-500">One Harvest</span> at a Time.</h2>
-                                    <div class="space-y-8">
-                                        <div class="bg-gray-900 p-8 rounded-3xl border-l-8 border-green-600">
-                                            <p class="text-xl italic mb-6">"Before AgriIsoko, half my cabbage crop used to rot while waiting for a truck. Now, I sell my entire harvest before I even cut it."</p>
-                                            <div class="flex items-center">
-                                                <div class="w-12 h-12 bg-green-600 rounded-full mr-4 flex items-center justify-center font-bold">JD</div>
-                                                <div>
-                                                    <p class="font-bold">Jean Damascene</p>
-                                                    <p class="text-gray-500 text-xs uppercase">Smallholder Farmer, Musanze</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="relative">
-                                    <div class="absolute -top-20 -right-20 w-80 h-80 bg-green-600/20 rounded-full blur-3xl"></div>
-                                    <div class="bg-gray-900 p-10 rounded-[3rem] border border-gray-800">
-                                        <h4 class="text-2xl font-bold mb-6">Impact Statistics</h4>
-                                        <div class="space-y-10">
-                                            <div>
-                                                <div class="flex justify-between mb-2">
-                                                    <span class="font-bold">Income Increase (Avg)</span>
-                                                    <span class="text-green-500 font-bold">+35%</span>
-                                                </div>
-                                                <div class="w-full bg-gray-800 h-2 rounded-full"><div class="bg-green-500 h-full w-4/5 rounded-full"></div></div>
-                                            </div>
-                                            <div>
-                                                <div class="flex justify-between mb-2">
-                                                    <span class="font-bold">Waste Reduction</span>
-                                                    <span class="text-green-500 font-bold">-60%</span>
-                                                </div>
-                                                <div class="w-full bg-gray-800 h-2 rounded-full"><div class="bg-green-500 h-full w-3/5 rounded-full"></div></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- FAQ Section -->
-                    <section id="faq" class="section-padding bg-white">
-                        <div class="max-w-3xl mx-auto px-4">
-                            <h2 class="text-4xl font-black text-center mb-12 uppercase">Frequently Asked Questions</h2>
-                            <div class="space-y-6">
-                                <div class="border-b border-gray-100 pb-6">
-                                    <h4 class="text-xl font-bold mb-3">How do I get paid?</h4>
-                                    <p class="text-gray-600">Payments are processed digitally upon confirmation of delivery. Funds are settled into your AgriIsoko wallet or linked bank account within 24 hours.</p>
-                                </div>
-                                <div class="border-b border-gray-100 pb-6">
-                                    <h4 class="text-xl font-bold mb-3">Who handles the transport?</h4>
-                                    <p class="text-gray-600">Verified distributors on our platform bid for delivery routes. You can choose to use your own transport or hire a partner from the platform.</p>
-                                </div>
-                                <div class="border-b border-gray-100 pb-6">
-                                    <h4 class="text-xl font-bold mb-3">What are the fees?</h4>
-                                    <p class="text-gray-600">We charge a flat 3% commission on successful transactions to maintain the platform and verify logistics partners. No hidden fees.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- CTA -->
-                    <section class="py-24 bg-green-600 text-white text-center">
-                        <div class="max-w-4xl mx-auto px-4">
-                            <h2 class="text-5xl md:text-6xl font-black mb-8">Ready to grow your trade?</h2>
-                            <p class="text-xl mb-10 opacity-90">Join the thousands of users already digitizing the African farm-to-fork supply chain.</p>
-                            <button onclick="navigateTo('signup')" class="bg-black text-white px-12 py-5 rounded-2xl font-bold text-xl hover:scale-105 transition-transform shadow-2xl">Create My Account Now</button>
-                        </div>
-                    </section>
-                </div>
-            `,
-            marketplace: `
-                <div class="fade-in bg-gray-50 min-h-screen pb-24">
-                    <div class="bg-black py-20 text-center text-white">
-                        <h2 class="text-5xl font-black uppercase mb-4">Live Marketplace</h2>
-                        <p class="text-gray-400">Public view of real-time supply and current market pricing.</p>
-                    </div>
-                    <div class="max-w-7xl mx-auto px-4 -mt-10">
-                        <div class="bg-white p-6 rounded-3xl shadow-2xl flex flex-col md:flex-row gap-6">
-                            <div class="flex-grow">
-                                <input type="text" placeholder="Search by crop or region..." class="w-full bg-gray-50 border-none rounded-xl py-4 px-6 outline-none focus:ring-2 focus:ring-green-600">
-                            </div>
-                            <button class="bg-black text-white px-10 py-4 rounded-xl font-bold">Filter</button>
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mt-16">
-                            <!-- Sample Product -->
-                            <div class="bg-white rounded-3xl p-6 border border-gray-100 hover:shadow-xl transition">
-                                <div class="h-40 bg-gray-100 rounded-2xl mb-4 flex items-center justify-center text-5xl">🥔</div>
-                                <h4 class="font-bold text-lg">Irish Potatoes</h4>
-                                <p class="text-gray-500 text-sm mb-4">Northern Region • Musa Farms</p>
-                                <div class="flex justify-between items-end">
-                                    <span class="text-2xl font-black text-green-600">$0.80<span class="text-xs text-gray-400">/kg</span></span>
-                                    <button onclick="navigateTo('login')" class="bg-black text-white text-xs font-bold py-2 px-4 rounded-lg">Order</button>
-                                </div>
-                            </div>
-                            <!-- Repeat ... -->
-                        </div>
-                    </div>
-                </div>
-            `,
-            login: `
-                <div class="min-h-[80vh] flex items-center justify-center bg-gray-50 py-20 px-4">
-                    <div class="bg-white p-12 rounded-[3rem] shadow-2xl w-full max-w-md border border-gray-100 fade-in text-center">
-                        <h2 class="text-4xl font-black mb-2 uppercase">Welcome</h2>
-                        <p class="text-gray-500 mb-10">Access your AgriIsoko portal</p>
-                        <form onsubmit="handleAuth(event)" class="space-y-6 text-left">
-                            <div>
-                                <label class="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">Email Address</label>
-                                <input type="email" required class="w-full px-6 py-4 rounded-2xl bg-gray-50 border-none outline-none focus:ring-2 focus:ring-green-600">
-                            </div>
-                            <div>
-                                <label class="block text-xs font-black uppercase tracking-widest text-gray-400 mb-2">Password</label>
-                                <input type="password" required class="w-full px-6 py-4 rounded-2xl bg-gray-50 border-none outline-none focus:ring-2 focus:ring-green-600">
-                            </div>
-                            <button type="submit" class="w-full bg-black text-white py-5 rounded-2xl font-bold text-lg hover:bg-green-600 transition shadow-lg">Login to System</button>
-                        </form>
-                    </div>
-                </div>
-            `,
-            signup: `
-                <div class="min-h-[80vh] flex items-center justify-center bg-gray-50 py-20 px-4">
-                    <div class="bg-white p-12 rounded-[3rem] shadow-2xl w-full max-w-2xl border border-gray-100 fade-in">
-                        <h2 class="text-4xl font-black mb-2 uppercase text-center">Join the Network</h2>
-                        <p class="text-gray-500 mb-10 text-center">Select your role to begin registration</p>
-                        <div class="grid grid-cols-3 gap-4 mb-10">
-                            <button class="p-6 border-2 border-black rounded-2xl hover:bg-green-50 text-center">
-                                <i class="fas fa-seedling block text-2xl mb-2"></i> Farmer
-                            </button>
-                            <button class="p-6 border-2 border-gray-100 rounded-2xl hover:border-black text-center">
-                                <i class="fas fa-truck block text-2xl mb-2"></i> Distributor
-                            </button>
-                            <button class="p-6 border-2 border-gray-100 rounded-2xl hover:border-black text-center">
-                                <i class="fas fa-store block text-2xl mb-2"></i> Market
-                            </button>
-                        </div>
-                        <form onsubmit="handleAuth(event)" class="grid grid-cols-2 gap-6">
-                            <input type="text" placeholder="Full Name" class="col-span-2 px-6 py-4 rounded-2xl bg-gray-50 border-none outline-none focus:ring-2 focus:ring-green-600">
-                            <input type="email" placeholder="Email" class="px-6 py-4 rounded-2xl bg-gray-50 border-none outline-none focus:ring-2 focus:ring-green-600">
-                            <input type="tel" placeholder="Phone" class="px-6 py-4 rounded-2xl bg-gray-50 border-none outline-none focus:ring-2 focus:ring-green-600">
-                            <button type="submit" class="col-span-2 bg-black text-white py-5 rounded-2xl font-bold text-lg">Continue</button>
-                        </form>
-                    </div>
-                </div>
-            `,
-            dashboard: `
-                <div class="fade-in bg-gray-50 min-h-screen">
-                    <nav class="bg-black text-white px-8 py-4 flex justify-between items-center">
-                        <div class="flex items-center space-x-4">
-                            <i class="fas fa-leaf text-green-500"></i>
-                            <span class="font-bold">AgriIsoko Farmer Portal</span>
-                        </div>
-                        <button onclick="navigateTo('home')" class="text-xs font-bold">Logout</button>
-                    </nav>
-                    <div class="max-w-7xl mx-auto px-8 py-12">
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            <div class="bg-white p-8 rounded-3xl shadow-sm">
-                                <h5 class="text-gray-400 font-bold text-xs uppercase mb-2">Total Earnings</h5>
-                                <p class="text-4xl font-black">$2,450</p>
-                            </div>
-                            <div class="bg-white p-8 rounded-3xl shadow-sm">
-                                <h5 class="text-gray-400 font-bold text-xs uppercase mb-2">Active Orders</h5>
-                                <p class="text-4xl font-black">14</p>
-                            </div>
-                            <div class="bg-white p-8 rounded-3xl shadow-sm">
-                                <h5 class="text-gray-400 font-bold text-xs uppercase mb-2">Quality Score</h5>
-                                <p class="text-4xl font-black text-green-600">98%</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `
-        };
-
-        // Navigation Controller
-        function navigateTo(viewKey) {
-            window.location.hash = viewKey;
-            render(viewKey);
-            window.scrollTo(0, 0);
-            document.getElementById('mobile-menu').classList.add('hidden');
-        }
-
-        function render(viewKey) {
-            const html = views[viewKey] || views.home;
-            const viewport = document.getElementById('app-viewport');
-            const footer = document.getElementById('main-footer');
-            
-            viewport.innerHTML = html;
-            
-            // Toggle footer for app-like views
-            if (viewKey === 'dashboard') {
-                footer.classList.add('hidden');
+        // Basic Mobile Menu Toggle
+        const menuBtn = document.getElementById('menu-toggle');
+        const nav = document.querySelector('nav .hidden.md\\:flex');
+        
+        // Simple scroll reveal effect
+        window.addEventListener('scroll', () => {
+            const navbar = document.querySelector('nav');
+            if (window.scrollY > 50) {
+                navbar.classList.add('shadow-sm');
             } else {
-                footer.classList.remove('hidden');
+                navbar.classList.remove('shadow-sm');
             }
-        }
-
-        function handleAuth(e) {
-            e.preventDefault();
-            navigateTo('dashboard');
-        }
-
-        // Init
-        window.addEventListener('hashchange', () => {
-            const hash = window.location.hash.replace('#', '') || 'home';
-            render(hash);
         });
-
-        window.onload = () => {
-            const hash = window.location.hash.replace('#', '') || 'home';
-            render(hash);
-        };
-
-        document.getElementById('mobile-menu-btn').onclick = () => {
-            document.getElementById('mobile-menu').classList.toggle('hidden');
-        };
     </script>
 </body>
 </html>
