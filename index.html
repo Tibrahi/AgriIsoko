@@ -19,6 +19,27 @@
             --agri-black: #000000;
         }
 
+        /* --- UNIQUE CUSTOM SCROLLBAR --- */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--agri-black);
+            border-radius: 10px;
+            border: 3px solid #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--agri-green);
+        }
+        /* Firefox Support */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: var(--agri-black) #f1f1f1;
+        }
+
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
             background-color: #FFFFFF;
@@ -50,6 +71,31 @@
         }
         .nav-link:hover::after {
             width: 100%;
+        }
+
+        /* Carousel Styles */
+        .carousel-container {
+            position: relative;
+            width: 100%;
+            height: 450px;
+            overflow: hidden;
+            border-radius: 3rem;
+        }
+        .carousel-slide {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+            background-size: cover;
+            background-position: center;
+        }
+        .carousel-slide.active {
+            opacity: 1;
+        }
+        .carousel-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.6));
         }
     </style>
 </head>
@@ -102,27 +148,22 @@
                     </a>
                 </div>
             </div>
-            <div class="flex-1 relative">
-                <div class="relative z-10 bg-white p-8 rounded-[3rem] shadow-2xl border border-gray-100">
-                    <div class="flex justify-between items-center mb-8">
-                        <h3 class="font-black text-2xl">Market Pulse</h3>
-                        <span class="text-green-600 font-bold bg-green-50 px-3 py-1 rounded-lg text-sm">Live</span>
+            
+            <!-- Hero Carousel (Replaced Market Pulse) -->
+            <div class="flex-1 w-full relative">
+                <div class="carousel-container shadow-2xl border border-gray-100 relative z-10">
+                    <div class="carousel-slide active" style="background-image: url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=1000&auto=format&fit=crop');">
+                        <div class="carousel-overlay"></div>
                     </div>
-                    <div class="space-y-6">
-                        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
-                            <div class="flex items-center gap-4">
-                                <span class="text-3xl">🌽</span>
-                                <div><p class="font-bold">Yellow Maize</p><p class="text-xs text-gray-500">14 Active Supplies</p></div>
-                            </div>
-                            <p class="font-black text-green-600">$0.45/kg</p>
-                        </div>
-                        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
-                            <div class="flex items-center gap-4">
-                                <span class="text-3xl">🥑</span>
-                                <div><p class="font-bold">Hass Avocado</p><p class="text-xs text-gray-500">8 Verified Farms</p></div>
-                            </div>
-                            <p class="font-black text-green-600">$1.20/kg</p>
-                        </div>
+                    <div class="carousel-slide" style="background-image: url('https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?q=80&w=1000&auto=format&fit=crop');">
+                        <div class="carousel-overlay"></div>
+                    </div>
+                    <div class="carousel-slide" style="background-image: url('https://images.unsplash.com/photo-1595841696677-6489ff3f8cd1?q=80&w=1000&auto=format&fit=crop');">
+                        <div class="carousel-overlay"></div>
+                    </div>
+                    <div class="absolute bottom-10 left-10 text-white z-20">
+                        <h4 class="text-3xl font-black uppercase tracking-tighter">Verified Sourcing</h4>
+                        <p class="text-sm opacity-80">Directly from the heart of the farm.</p>
                     </div>
                 </div>
                 <!-- Decorative Circle -->
@@ -319,11 +360,23 @@
     </footer>
 
     <script>
-        // Basic Mobile Menu Toggle
-        const menuBtn = document.getElementById('menu-toggle');
-        const nav = document.querySelector('nav .hidden.md\\:flex');
+        // Carousel Logic
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.carousel-slide');
         
-        // Simple scroll reveal effect
+        function showNextSlide() {
+            slides[currentSlide].classList.remove('active');
+            currentSlide = (currentSlide + 1) % slides.length;
+            slides[currentSlide].classList.add('active');
+        }
+
+        setInterval(showNextSlide, 4000); // Slide every 4 seconds
+
+        // Mobile Menu Toggle
+        const menuBtn = document.getElementById('menu-toggle');
+        // (Add your menu logic here later)
+        
+        // Scroll Reveal / Shadow Navbar
         window.addEventListener('scroll', () => {
             const navbar = document.querySelector('nav');
             if (window.scrollY > 50) {
