@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgriISoko | Secure Access</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // --- Custom Alert Logic ---
+        window.showAlert = (message, isError = true) => {
+            const toast = document.getElementById('customAlert');
+            toast.textContent = message;
+            toast.className = `fixed top-5 right-5 px-6 py-3 rounded-lg shadow-xl transition-all duration-500 transform translate-y-0 z-50 ${isError ? 'bg-red-600' : 'bg-blue-600'} text-white`;
+            setTimeout(() => { toast.classList.add('translate-y-[-100px]', 'opacity-0'); }, 4000);
+        };
+
+        // --- Auth Switching ---
+        window.toggleAuth = () => {
+            document.getElementById('loginSection').classList.toggle('hidden');
+            document.getElementById('signupSection').classList.toggle('hidden');
+        };
+
+        // --- Form Handling ---
+        document.getElementById('signupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = e.target.email.value;
+            const password = e.target.password.value;
+            const role = e.target.role.value;
+            const errorMsg = document.getElementById('signupError');
+
+            try {
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                await setDoc(doc(db, "users", userCredential.user.uid), {
+                    email, role, status: "pending", createdAt: new Date()
+                });
+                window.location.href = "status.html?type=verify";
+            } catch (error) {
+                errorMsg.textContent = error.message;
+            }
+        });
+
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                await signInWithEmailAndPassword(auth, e.target.email.value, e.target.password.value);
+                window.showAlert("Login Successful!", false);
+            } catch (error) {
+                document.getElementById('loginError').textContent = "Invalid email or password.";
+            }
+        });
+    </script>
+</head>
+<body class="bg-white text-black font-sans overflow-hidden">
+
+    <div id="customAlert" class="fixed top-5 right-5 opacity-0 transition-all pointer-events-none"></div>
+
+    <div class="flex h-screen w-full">
+        <div class="hidden lg:flex lg:w-1/2 bg-black relative overflow-hidden">
+            <div id="slide1" class="absolute inset-0 transition-opacity duration-1000 flex flex-col justify-center items-center p-12 text-center">
+                <div class="absolute inset-0 bg-blue-900/40 z-10"></div>
+                <img src="https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?auto=format&fit=crop&w=1000&q=80" class="absolute inset-0 w-full h-full object-cover" alt="Farmer">
+                <div class="relative z-20 text-white">
+                    <h2 class="text-5xl font-bold mb-4">Empowering Farmers</h2>
+                    <p class="text-xl">Direct access to tools, seeds, and fair pricing.</p>
+                </div>
+            </div>
+            <div id="slide2" class="absolute inset-0 transition-opacity duration-1000 opacity-0 flex flex-col justify-center items-center p-12 text-center">
+                <div class="absolute inset-0 bg-black/40 z-10"></div>
+                <img src="https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?auto=format&fit=crop&w=1000&q=80" class="absolute inset-0 w-full h-full object-cover" alt="Distributor">
+                <div class="relative z-20 text-white">
+                    <h2 class="text-5xl font-bold mb-4">Streamlined Distribution</h2>
+                    <p class="text-xl">The bridge between the soil and the shelf.</p>
+                </div>
+            </div>
+            <div class="absolute bottom-10 left-10 z-20">
+                <h1 class="text-3xl font-black tracking-tighter text-white">Agri<span class="text-blue-500">ISoko</span></h1>
+            </div>
+        </div>
+
+        <div class="w-full lg:w-1/2 flex items-center justify-center p-8 md:p-16">
+            <div class="w-full max-w-md">
+                
+                <div id="loginSection">
+                    <h2 class="text-4xl font-bold mb-2">Welcome Back</h2>
+                    <p class="text-gray-500 mb-8">Please enter your details to sign in.</p>
+                    
+                    <form id="loginForm" class="space-y-5">
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Email Address</label>
+                            <input type="email" name="email" required class="w-full p-3 border-2 border-gray-100 rounded-xl focus:border-blue-600 outline-none transition" placeholder="name@company.com">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Password</label>
+                            <input type="password" name="password" required class="w-full p-3 border-2 border-gray-100 rounded-xl focus:border-blue-600 outline-none transition" placeholder="••••••••">
+                            <p id="loginError" class="text-red-500 text-xs mt-2 font-medium"></p>
+                        </div>
+                        <div class="flex justify-end">
+                            <a href="status.html?type=forgot" class="text-sm font-bold text-blue-600 hover:underline">Forgot Password?</a>
+                        </div>
+                        <button class="w-full bg-black text-white py-4 rounded-xl font-bold hover:bg-blue-600 transition-colors shadow-lg">Sign In</button>
+                    </form>
+                    <p class="mt-8 text-center text-gray-600">Don't have an account? <button onclick="toggleAuth()" class="text-blue-600 font-bold">Create one</button></p>
+                </div>
+
+                <div id="signupSection" class="hidden">
+                    <h2 class="text-4xl font-bold mb-2">Join AgriISoko</h2>
+                    <p class="text-gray-500 mb-8">Start your journey in the digital marketplace.</p>
+                    
+                    <form id="signupForm" class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold mb-1">Full Name</label>
+                                <input type="text" required class="w-full p-3 border-2 border-gray-100 rounded-xl focus:border-blue-600 outline-none" placeholder="John Doe">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold mb-1">Role</label>
+                                <select name="role" class="w-full p-3 border-2 border-gray-100 rounded-xl focus:border-blue-600 outline-none bg-white">
+                                    <option value="farmer">Farmer</option>
+                                    <option value="distributor">Distributor</option>
+                                    <option value="market">Market Owner</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Email</label>
+                            <input type="email" name="email" required class="w-full p-3 border-2 border-gray-100 rounded-xl focus:border-blue-600 outline-none" placeholder="name@email.com">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold mb-1">Password</label>
+                            <input type="password" name="password" required class="w-full p-3 border-2 border-gray-100 rounded-xl focus:border-blue-600 outline-none" placeholder="••••••••">
+                            <p id="signupError" class="text-red-500 text-xs mt-2 font-medium"></p>
+                        </div>
+                        <button class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-black transition-colors shadow-lg mt-4">Register Account</button>
+                    </form>
+                    <p class="mt-8 text-center text-gray-600">Already a member? <button onclick="toggleAuth()" class="text-blue-600 font-bold">Log in</button></p>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Slideshow Logic
+        let currentSlide = 1;
+        setInterval(() => {
+            document.getElementById(`slide${currentSlide}`).classList.add('opacity-0');
+            currentSlide = currentSlide === 1 ? 2 : 1;
+            document.getElementById(`slide${currentSlide}`).classList.remove('opacity-0');
+        }, 5000);
+    </script>
+</body>
+</html>
