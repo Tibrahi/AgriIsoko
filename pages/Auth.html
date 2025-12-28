@@ -3,167 +3,251 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AgriISoko | Secure Access</title>
+    <title>Agriisoko | Secure Authentication</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT.firebaseapp.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT.appspot.com",
-            messagingSenderId: "YOUR_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-
-        // --- Custom Alert Logic ---
-        window.showAlert = (message, isError = true) => {
-            const toast = document.getElementById('customAlert');
-            toast.textContent = message;
-            toast.className = `fixed top-5 right-5 px-6 py-3 rounded-lg shadow-xl transition-all duration-500 transform translate-y-0 z-50 ${isError ? 'bg-red-600' : 'bg-blue-600'} text-white`;
-            setTimeout(() => { toast.classList.add('translate-y-[-100px]', 'opacity-0'); }, 4000);
-        };
-
-        // --- Auth Switching ---
-        window.toggleAuth = () => {
-            document.getElementById('loginSection').classList.toggle('hidden');
-            document.getElementById('signupSection').classList.toggle('hidden');
-        };
-
-        // --- Form Handling ---
-        document.getElementById('signupForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = e.target.email.value;
-            const password = e.target.password.value;
-            const role = e.target.role.value;
-            const errorMsg = document.getElementById('signupError');
-
-            try {
-                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                await setDoc(doc(db, "users", userCredential.user.uid), {
-                    email, role, status: "pending", createdAt: new Date()
-                });
-                window.location.href = "status.html?type=verify";
-            } catch (error) {
-                errorMsg.textContent = error.message;
-            }
-        });
-
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            try {
-                await signInWithEmailAndPassword(auth, e.target.email.value, e.target.password.value);
-                window.showAlert("Login Successful!", false);
-            } catch (error) {
-                document.getElementById('loginError').textContent = "Invalid email or password.";
-            }
-        });
-    </script>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js" type="module"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #ffffff; color: #000; overflow-x: hidden; }
+        .bg-agri-green { background-color: #1fb622; }
+        .text-agri-green { color: #1fb622; }
+        .carousel-container { position: relative; height: 100vh; width: 100%; overflow: hidden; background: #000; }
+        .slide { position: absolute; inset: 0; opacity: 0; transition: opacity 1s ease-in-out; background-size: cover; background-position: center; }
+        .slide.active { opacity: 1; }
+        .validation-msg { font-size: 0.75rem; color: #ff0000; margin-top: 4px; display: none; font-weight: 600; }
+        .input-error { border-bottom: 2px solid #ff0000 !important; }
+        #notification-banner { transform: translateY(-100%); transition: transform 0.4s ease-out; }
+        #notification-banner.show { transform: translateY(0); }
+    </style>
 </head>
-<body class="bg-white text-black font-sans overflow-hidden">
+<body class="min-h-screen flex flex-col md:flex-row">
 
-    <div id="customAlert" class="fixed top-5 right-5 opacity-0 transition-all pointer-events-none"></div>
+    <!-- 
+      FIRESTORE SECURITY RULES (Copy & Paste these into your Firebase Console -> Firestore -> Rules):
+      
+      service cloud.firestore {
+        match /databases/{database}/documents {
+          match /artifacts/{appId}/users/{userId}/{document=**} {
+            allow read, write: if request.auth != null && request.auth.uid == userId;
+          }
+          match /artifacts/{appId}/public/data/{document=**} {
+            allow read: if true;
+            allow write: if request.auth != null;
+          }
+        }
+      }
+    -->
 
-    <div class="flex h-screen w-full">
-        <div class="hidden lg:flex lg:w-1/2 bg-black relative overflow-hidden">
-            <div id="slide1" class="absolute inset-0 transition-opacity duration-1000 flex flex-col justify-center items-center p-12 text-center">
-                <div class="absolute inset-0 bg-blue-900/40 z-10"></div>
-                <img src="https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?auto=format&fit=crop&w=1000&q=80" class="absolute inset-0 w-full h-full object-cover" alt="Farmer">
-                <div class="relative z-20 text-white">
-                    <h2 class="text-5xl font-bold mb-4">Empowering Farmers</h2>
-                    <p class="text-xl">Direct access to tools, seeds, and fair pricing.</p>
-                </div>
-            </div>
-            <div id="slide2" class="absolute inset-0 transition-opacity duration-1000 opacity-0 flex flex-col justify-center items-center p-12 text-center">
-                <div class="absolute inset-0 bg-black/40 z-10"></div>
-                <img src="https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?auto=format&fit=crop&w=1000&q=80" class="absolute inset-0 w-full h-full object-cover" alt="Distributor">
-                <div class="relative z-20 text-white">
-                    <h2 class="text-5xl font-bold mb-4">Streamlined Distribution</h2>
-                    <p class="text-xl">The bridge between the soil and the shelf.</p>
-                </div>
-            </div>
-            <div class="absolute bottom-10 left-10 z-20">
-                <h1 class="text-3xl font-black tracking-tighter text-white">Agri<span class="text-blue-500">ISoko</span></h1>
-            </div>
+    <div id="notification-banner" class="fixed top-0 left-0 w-full z-50 p-4 text-center font-bold shadow-lg bg-black text-white">
+        <span id="notification-text"></span>
+    </div>
+
+    <!-- LEFT SIDE: CAROUSEL -->
+    <div class="hidden md:block md:w-1/2 carousel-container">
+        <div id="carousel"></div>
+        <div class="absolute inset-0 bg-black/50 flex flex-col justify-end p-12 text-white">
+            <h1 class="text-5xl font-bold mb-4">Agriisoko</h1>
+            <p class="text-xl max-w-md">The digital marketplace for Rwanda's Farmers, Distributors, and Sellers.</p>
         </div>
+    </div>
 
-        <div class="w-full lg:w-1/2 flex items-center justify-center p-8 md:p-16">
-            <div class="w-full max-w-md">
-                
-                <div id="loginSection">
-                    <h2 class="text-4xl font-bold mb-2">Welcome Back</h2>
-                    <p class="text-gray-500 mb-8">Please enter your details to sign in.</p>
-                    
-                    <form id="loginForm" class="space-y-5">
-                        <div>
-                            <label class="block text-sm font-semibold mb-1">Email Address</label>
-                            <input type="email" name="email" required class="w-full p-3 border-2 border-gray-100 rounded-xl focus:border-blue-600 outline-none transition" placeholder="name@company.com">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-semibold mb-1">Password</label>
-                            <input type="password" name="password" required class="w-full p-3 border-2 border-gray-100 rounded-xl focus:border-blue-600 outline-none transition" placeholder="••••••••">
-                            <p id="loginError" class="text-red-500 text-xs mt-2 font-medium"></p>
-                        </div>
-                        <div class="flex justify-end">
-                            <a href="status.html?type=forgot" class="text-sm font-bold text-blue-600 hover:underline">Forgot Password?</a>
-                        </div>
-                        <button class="w-full bg-black text-white py-4 rounded-xl font-bold hover:bg-blue-600 transition-colors shadow-lg">Sign In</button>
-                    </form>
-                    <p class="mt-8 text-center text-gray-600">Don't have an account? <button onclick="toggleAuth()" class="text-blue-600 font-bold">Create one</button></p>
+    <!-- RIGHT SIDE: LOGIN / SIGNUP -->
+    <div class="w-full md:w-1/2 flex items-center justify-center p-8 bg-white overflow-y-auto">
+        <div class="w-full max-w-md">
+            <div class="flex justify-between items-center mb-10 border-b border-gray-100 pb-4">
+                <button id="show-login" class="text-2xl font-bold text-agri-green border-b-4 border-agri-green px-2 py-1">Login</button>
+                <button id="show-signup" class="text-2xl font-bold text-gray-300 hover:text-black px-2 py-1">Sign Up</button>
+            </div>
+
+            <!-- LOGIN FORM -->
+            <form id="login-form" class="space-y-6">
+                <div>
+                    <label class="block text-xs font-bold uppercase mb-1">Email</label>
+                    <input type="email" id="login-email" class="w-full border-b-2 border-black p-3 focus:outline-none">
+                    <p class="validation-msg" id="err-login-email">Valid email required</p>
                 </div>
-
-                <div id="signupSection" class="hidden">
-                    <h2 class="text-4xl font-bold mb-2">Join AgriISoko</h2>
-                    <p class="text-gray-500 mb-8">Start your journey in the digital marketplace.</p>
-                    
-                    <form id="signupForm" class="space-y-4">
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label class="block text-sm font-semibold mb-1">Full Name</label>
-                                <input type="text" required class="w-full p-3 border-2 border-gray-100 rounded-xl focus:border-blue-600 outline-none" placeholder="John Doe">
-                            </div>
-                            <div>
-                                <label class="block text-sm font-semibold mb-1">Role</label>
-                                <select name="role" class="w-full p-3 border-2 border-gray-100 rounded-xl focus:border-blue-600 outline-none bg-white">
-                                    <option value="farmer">Farmer</option>
-                                    <option value="distributor">Distributor</option>
-                                    <option value="market">Market Owner</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-semibold mb-1">Email</label>
-                            <input type="email" name="email" required class="w-full p-3 border-2 border-gray-100 rounded-xl focus:border-blue-600 outline-none" placeholder="name@email.com">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-semibold mb-1">Password</label>
-                            <input type="password" name="password" required class="w-full p-3 border-2 border-gray-100 rounded-xl focus:border-blue-600 outline-none" placeholder="••••••••">
-                            <p id="signupError" class="text-red-500 text-xs mt-2 font-medium"></p>
-                        </div>
-                        <button class="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-black transition-colors shadow-lg mt-4">Register Account</button>
-                    </form>
-                    <p class="mt-8 text-center text-gray-600">Already a member? <button onclick="toggleAuth()" class="text-blue-600 font-bold">Log in</button></p>
+                <div>
+                    <label class="block text-xs font-bold uppercase mb-1">Password</label>
+                    <input type="password" id="login-password" class="w-full border-b-2 border-black p-3 focus:outline-none">
+                    <p class="validation-msg" id="err-login-pass">Password required</p>
                 </div>
+                <button type="submit" class="w-full bg-black text-white py-4 font-bold hover:bg-gray-900 transition-all">SIGN IN</button>
+            </form>
 
+            <!-- SIGNUP FORM -->
+            <form id="signup-form" class="hidden space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold uppercase mb-1">Full Names</label>
+                        <input type="text" id="reg-name" class="w-full border-b-2 border-black p-2 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold uppercase mb-1">Phone</label>
+                        <input type="tel" id="reg-phone" class="w-full border-b-2 border-black p-2 focus:outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase mb-1">Location (District)</label>
+                    <input type="text" id="reg-location" class="w-full border-b-2 border-black p-2 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase mb-1">I am a...</label>
+                    <select id="reg-role" class="w-full border-b-2 border-black p-2 focus:outline-none bg-white">
+                        <option value="">Select Role</option>
+                        <option value="farmer">Farmer</option>
+                        <option value="distributor">Distributor</option>
+                        <option value="seller">Seller</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase mb-1">Email</label>
+                    <input type="email" id="reg-email" class="w-full border-b-2 border-black p-2 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase mb-1">Password</label>
+                    <input type="password" id="reg-password" class="w-full border-b-2 border-black p-2 focus:outline-none">
+                </div>
+                <button type="submit" class="w-full bg-agri-green text-white py-4 font-bold mt-4">CREATE ACCOUNT</button>
+            </form>
+
+            <div id="post-auth-box" class="hidden text-center py-10">
+                <h2 class="text-2xl font-bold mb-4">Account Verified!</h2>
+                <a id="dashboard-link" href="#" class="inline-block bg-black text-white px-8 py-4 font-bold hover:bg-agri-green transition-all">
+                    GO TO DASHBOARD →
+                </a>
             </div>
         </div>
     </div>
 
-    <script>
-        // Slideshow Logic
-        let currentSlide = 1;
-        setInterval(() => {
-            document.getElementById(`slide${currentSlide}`).classList.add('opacity-0');
-            currentSlide = currentSlide === 1 ? 2 : 1;
-            document.getElementById(`slide${currentSlide}`).classList.remove('opacity-0');
-        }, 5000);
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+       // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyDaFpScvJ1DG0zVDNPBpegz5ZOz1iVr8a8",
+  authDomain: "agriisoko-badad.firebaseapp.com",
+  projectId: "agriisoko-badad",
+  storageBucket: "agriisoko-badad.firebasestorage.app",
+  messagingSenderId: "853616797068",
+  appId: "1:853616797068:web:d7d2c3b46126af62a522a9",
+  measurementId: "G-R3FR0W9DEK"
+};
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'agriisoko-app';
+
+        // Carousel Images
+        const images = [
+            "https://images.unsplash.com/photo-1592982537447-7440770cbfc9?auto=format&fit=crop&q=80&w=1200",
+            "https://images.unsplash.com/photo-1589923188900-85dae523342b?auto=format&fit=crop&q=80&w=1200"
+        ];
+
+        function initCarousel() {
+            const container = document.getElementById('carousel');
+            images.forEach((src, i) => {
+                const img = new Image();
+                img.src = src;
+                img.onload = () => {
+                    const div = document.createElement('div');
+                    div.className = `slide ${i === 0 ? 'active' : ''}`;
+                    div.style.backgroundImage = `url(${src})`;
+                    container.appendChild(div);
+                };
+            });
+            let idx = 0;
+            setInterval(() => {
+                const slides = document.querySelectorAll('.slide');
+                if (slides.length < 2) return;
+                slides[idx].classList.remove('active');
+                idx = (idx + 1) % slides.length;
+                slides[idx].classList.add('active');
+            }, 5000);
+        }
+
+        function showMsg(text, isError = false) {
+            const banner = document.getElementById('notification-banner');
+            const txt = document.getElementById('notification-text');
+            banner.style.backgroundColor = isError ? "#000" : "#1fb622";
+            banner.style.borderBottom = isError ? "2px solid #ff0000" : "none";
+            txt.textContent = text;
+            banner.classList.add('show');
+            setTimeout(() => banner.classList.remove('show'), 4000);
+        }
+
+        // Signup Logic
+        document.getElementById('signup-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('reg-email').value;
+            const pass = document.getElementById('reg-password').value;
+            const name = document.getElementById('reg-name').value;
+            const role = document.getElementById('reg-role').value;
+
+            if (!email || pass.length < 6 || !role) {
+                showMsg("Please check your details (Password min 6 chars)", true);
+                return;
+            }
+
+            try {
+                const cred = await createUserWithEmailAndPassword(auth, email, pass);
+                // RULE 1: Store profile in user-specific path
+                await setDoc(doc(db, 'artifacts', appId, 'users', cred.user.uid, 'profile'), {
+                    name, role, phone: document.getElementById('reg-phone').value,
+                    location: document.getElementById('reg-location').value,
+                    email
+                });
+                completeAuth(role);
+            } catch (err) {
+                showMsg(err.message, true);
+            }
+        };
+
+        // Login Logic
+        document.getElementById('login-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const pass = document.getElementById('login-password').value;
+            try {
+                const cred = await signInWithEmailAndPassword(auth, email, pass);
+                const profile = await getDoc(doc(db, 'artifacts', appId, 'users', cred.user.uid, 'profile'));
+                completeAuth(profile.exists() ? profile.data().role : 'user');
+            } catch (err) {
+                showMsg("Invalid credentials", true);
+            }
+        };
+
+        function completeAuth(role) {
+            document.getElementById('login-form').classList.add('hidden');
+            document.getElementById('signup-form').classList.add('hidden');
+            document.getElementById('post-auth-box').classList.remove('hidden');
+            document.getElementById('dashboard-link').href = `dashboard.html?role=${role}`;
+            showMsg("Successfully Authenticated!");
+        }
+
+        document.getElementById('show-login').onclick = () => {
+            document.getElementById('login-form').classList.remove('hidden');
+            document.getElementById('signup-form').classList.add('hidden');
+        };
+        document.getElementById('show-signup').onclick = () => {
+            document.getElementById('signup-form').classList.remove('hidden');
+            document.getElementById('login-form').classList.add('hidden');
+        };
+
+        window.onload = async () => {
+            initCarousel();
+            // RULE 3: Initial Auth
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token).catch(() => signInAnonymously(auth));
+            } else {
+                await signInAnonymously(auth);
+            }
+        };
     </script>
 </body>
 </html>
