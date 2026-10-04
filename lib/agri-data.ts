@@ -54,6 +54,15 @@ function connectionMessage(error?: unknown) {
   return "PostgreSQL could not be reached or the AgriIsoko schema is not installed.";
 }
 
+export async function getDatabaseStatus(): Promise<{ status: "connected" | "unavailable"; message: string }> {
+  try {
+    await getPool().query("SELECT 1");
+    return { status: "connected", message: "" };
+  } catch (error) {
+    return { status: "unavailable", message: connectionMessage(error) };
+  }
+}
+
 export async function getDashboardData(): Promise<DashboardData> {
   try {
     const pool = getPool();
