@@ -68,6 +68,7 @@ function validateValues(entity: string, raw: unknown, fields: readonly AdminFiel
       if (typeof rawValue !== "string") throw new Error(`${field.label} is invalid.`);
       const value = rawValue.trim();
       if (!value && field.required) throw new Error(`${field.label} is required.`);
+      if (field.name === "country_code" && !/^[A-Za-z]{2}$/.test(value)) throw new Error("Country code must be two letters, such as RW.");
       if (field.type === "date" && value && !/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error(`${field.label} must be a valid date.`);
       if (field.reference && value && !/^[0-9a-f-]{36}$/i.test(value)) throw new Error(`${field.label} selection is invalid.`);
       if (field.options && value && !field.options.some((option) => option.value === value)) throw new Error(`${field.label} selection is invalid.`);

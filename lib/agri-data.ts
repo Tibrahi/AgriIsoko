@@ -139,14 +139,14 @@ export async function getMarketplaceData(): Promise<MarketplaceData> {
       unit: string; price: string | null; currency: string; available_from: string | null;
     }>(`
       SELECT l.id, c.name AS crop, o.name AS seller, g.district_name AS district,
-             l.available_quantity::text AS quantity, l.unit,
+             greatest(l.available_quantity - coalesce((SELECT sum(mo.quantity) FROM marketplace_orders mo WHERE mo.listing_id=l.id AND mo.status IN ('requested','accepted','in_delivery')),0),0)::text AS quantity, l.unit,
              l.price_per_unit::text AS price, l.currency, l.available_from::text
       FROM marketplace_listings l
       JOIN crops c ON c.id = l.crop_id
       JOIN organizations o ON o.id = l.seller_organization_id
       JOIN geographies g ON g.id = l.geography_id
       WHERE l.status = 'open' AND l.verification_status = 'verified'
-        AND l.available_quantity > 0
+        AND l.available_quantity > coalesce((SELECT sum(mo.quantity) FROM marketplace_orders mo WHERE mo.listing_id=l.id AND mo.status IN ('requested','accepted','in_delivery')),0)
         AND (l.available_from IS NULL OR l.available_from <= CURRENT_DATE)
       ORDER BY l.created_at DESC
       LIMIT 40

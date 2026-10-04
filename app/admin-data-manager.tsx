@@ -10,13 +10,14 @@ const initialValue = (field: AdminField): string | boolean => {
   if (field.type === "checkbox") return field.name === "active";
   if (field.name === "unit") return "kg";
   if (field.name === "currency") return "RWF";
+  if (field.name === "country_code") return "RW";
   if (field.type === "select") return field.options?.[0]?.value ?? "";
   return "";
 };
 const formatValue = (value: unknown) => value === null || value === undefined || value === "" ? "—" : String(value).replaceAll("_", " ");
 
 export default function AdminDataManager() {
-  const [entity, setEntity] = useState("harvest_reports");
+  const [entity, setEntity] = useState("crops");
   const [records, setRecords] = useState<RecordRow[]>([]);
   const [options, setOptions] = useState<Record<string, Option[]>>({});
   const [form, setForm] = useState<Record<string, string | boolean>>({});
@@ -99,8 +100,9 @@ export default function AdminDataManager() {
         <p className="route-note">Showing the latest 100 records. Records referenced by other data cannot be deleted.</p>
       </section>
       <section className="panel glass-panel route-panel admin-data-form-panel" id="admin-data-form"><div className="panel-header"><div><p className="eyebrow">{editing ? "EDIT RECORD" : "NEW RECORD"}</p><h2>{editing ? "Update " : "Add "}{config.label.toLowerCase()}</h2></div></div>
+        {fields.some((field) => field.reference && !(options[field.reference]?.length)) && <p className="auth-message error setup-hint">This form needs linked records first. Create the required crops, locations, organizations, or seasons in the data set menu, then return here.</p>}
         <form className="admin-data-form" onSubmit={save}>{fields.map((field) => <Field key={field.name} field={field} value={form[field.name] ?? initialValue(field)} options={field.reference ? options[field.reference] ?? [] : []} onChange={(value) => setForm((current) => ({ ...current, [field.name]: value }))}/>)}
-          <div className="admin-form-actions"><button className="primary-button" disabled={saving}>{saving ? "Saving…" : editing ? "Save changes" : "Create record"}</button>{editing && <button type="button" className="refresh-button" onClick={resetForm}>Cancel edit</button>}</div>
+          <div className="admin-form-actions"><button className="primary-button" disabled={saving || fields.some((field) => field.required && field.reference && !(options[field.reference]?.length))}>{saving ? "Saving…" : editing ? "Save changes" : "Create record"}</button>{editing && <button type="button" className="refresh-button" onClick={resetForm}>Cancel edit</button>}</div>
         </form><p className="route-note">Administrative changes are attributed to your account. Verified records include your verification identity and timestamp.</p>
       </section>
     </div>

@@ -26,6 +26,7 @@ export const adminEntities: Record<string, AdminEntity> = {
     { name: "active", label: "Active", type: "checkbox" },
   ] },
   geographies: { label: "Locations", table: "geographies", fields: [
+    { name: "country_code", label: "Country code", type: "text", required: true },
     { name: "district_name", label: "District", type: "text", required: true },
     { name: "sector_name", label: "Sector", type: "text" },
     { name: "cell_name", label: "Cell", type: "text" },
@@ -44,6 +45,7 @@ export const adminEntities: Record<string, AdminEntity> = {
     { name: "organization_id", label: "Organization", type: "select", required: true, reference: "organizations" },
     { name: "geography_id", label: "Location", type: "select", required: true, reference: "geographies" },
     { name: "cultivated_area_ha", label: "Cultivated area (ha)", type: "number" },
+    { name: "location_point", label: "Map point or coordinates (optional)", type: "text" },
     { name: "verification_status", label: "Review status", type: "select", options: verificationOptions },
   ] },
   harvest_reports: { label: "Harvest reports", table: "harvest_reports", verification: true, fields: [

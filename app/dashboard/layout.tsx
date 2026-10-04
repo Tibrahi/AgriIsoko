@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getSession, isAdmin } from "@/lib/auth";
 import DashboardNavigation from "@/app/dashboard/navigation";
 import { getDatabaseStatus } from "@/lib/agri-data";
+import BrandMark from "@/app/brand-mark";
 
 export default async function DashboardLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   let user;
@@ -15,7 +16,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
 
   return <main className="app-shell">
     <aside className="sidebar glass-panel dashboard-sidebar">
-      <Link className="brand" href="/dashboard"><span className="brand-mark">A<span>+</span></span><span><strong>AgriIsoko</strong><small>RWANDA FOOD INTELLIGENCE</small></span></Link>
+      <Link className="brand" href="/dashboard"><BrandMark/><span><strong>AgriIsoko</strong><small>RWANDA FOOD INTELLIGENCE</small></span></Link>
       <div className="workspace-label">WORKSPACE</div>
       <DashboardNavigation admin={isAdmin(user)} items={[
         ["/dashboard", "Overview", "⌂"],
