@@ -12,6 +12,7 @@ const initialValue = (field: AdminField): string | boolean => {
   if (field.name === "currency") return "RWF";
   if (field.name === "country_code") return "RW";
   if (field.name === "verification_status") return "submitted";
+  if (field.name === "status") return field.options?.some((option) => option.value === "open") ? "open" : field.options?.[0]?.value ?? "";
   return "";
 };
 const formatValue = (value: unknown) => value === null || value === undefined || value === "" ? "—" : String(value).replaceAll("_", " ");
@@ -21,7 +22,7 @@ export default function AdminDataManager({ initialEntity = "crops" }: { initialE
   const [entityText, setEntityText] = useState(adminEntities[initialEntity]?.label ?? "Crops");
   const [records, setRecords] = useState<RecordRow[]>([]);
   const [options, setOptions] = useState<Record<string, Option[]>>({});
-  const [form, setForm] = useState<Record<string, string | boolean>>({});
+  const [form, setForm] = useState<Record<string, string | boolean>>(() => Object.fromEntries((adminEntities[initialEntity] ?? adminEntities.crops).fields.map((field) => [field.name, initialValue(field)])));
   const [editing, setEditing] = useState<RecordRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -75,7 +76,7 @@ export default function AdminDataManager({ initialEntity = "crops" }: { initialE
   async function save(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); setSaving(true); setError(""); setMessage("");
     try {
-      const values: Record<string, string | boolean> = { ...form };
+      const values: Record<string, string | boolean> = Object.fromEntries(fields.map((field) => [field.name, form[field.name] ?? initialValue(field)]));
       for (const field of fields) {
         if (!field.reference || !String(form[field.name] ?? "").trim()) continue;
         const match = options[field.reference]?.find((option) => option.label.toLocaleLowerCase() === String(form[field.name]).trim().toLocaleLowerCase());

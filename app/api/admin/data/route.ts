@@ -44,7 +44,7 @@ export async function GET(request: Request) {
   }
 }
 
-function validateValues(entity: string, raw: unknown, fields: readonly AdminField[]) {
+function validateValues(entity: string, raw: unknown, fields: readonly AdminField[], action: "create" | "update") {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error("Enter the record details.");
   const body = raw as Record<string, unknown>;
   const values: Record<string, unknown> = {};
@@ -55,9 +55,10 @@ function validateValues(entity: string, raw: unknown, fields: readonly AdminFiel
       if (rawValue !== undefined) values[field.name] = rawValue;
       continue;
     }
-    if (rawValue === undefined || rawValue === null || rawValue === "") {
+    if (rawValue === undefined) continue;
+    if (rawValue === null || rawValue === "") {
       if (field.required) throw new Error(`${field.label} is required.`);
-      if (rawValue !== undefined) values[field.name] = null;
+      if (action === "update") values[field.name] = null;
       continue;
     }
     if (field.type === "number") {
@@ -66,7 +67,9 @@ function validateValues(entity: string, raw: unknown, fields: readonly AdminFiel
       values[field.name] = number;
     } else {
       if (typeof rawValue !== "string") throw new Error(`${field.label} is invalid.`);
-      const value = rawValue.trim();
+      let value = rawValue.trim();
+      if (field.name === "country_code") value = value.toUpperCase();
+      if (field.name === "currency") value = value.toUpperCase();
       if (!value && field.required) throw new Error(`${field.label} is required.`);
       if (field.name === "country_code" && !/^[A-Za-z]{2}$/.test(value)) throw new Error("Country code must be two letters, such as RW.");
       if (field.type === "date" && value && !/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error(`${field.label} must be a valid date.`);
@@ -113,7 +116,7 @@ export async function POST(request: Request) {
     entity = String(body.entity ?? "");
     const config = adminEntities[entity];
     if (!config) return Response.json({ error: "Choose a supported data type." }, { status: 400 });
-    values = systemColumns(entity, admin.id, validateValues(entity, body.values, config.fields));
+    values = systemColumns(entity, admin.id, validateValues(entity, body.values, config.fields, "create"));
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : "Record details are invalid." }, { status: 400 });
   }
@@ -130,7 +133,7 @@ export async function PATCH(request: Request) {
     const config = adminEntities[entity];
     const id = String(body.id ?? "");
     if (!config || !/^[0-9a-f-]{36}$/i.test(id)) return Response.json({ error: "Choose a valid record." }, { status: 400 });
-    const values = validateValues(entity, body.values, config.fields);
+    const values = validateValues(entity, body.values, config.fields, "update");
     if (values.verification_status === "verified") {
       values.verified_by = admin.id;
       values.verified_at = new Date();
@@ -193,6 +196,8 @@ async function mutate(_request: Request, actor: string, entity: string, values: 
     await client.query("ROLLBACK").catch(() => undefined);
     if (error && typeof error === "object" && "code" in error && error.code === "23503") return Response.json({ error: "This record is linked to other records and cannot be removed or changed in this way." }, { status: 409 });
     if (error && typeof error === "object" && "code" in error && error.code === "23505") return Response.json({ error: "A record with these unique details already exists." }, { status: 409 });
+    if (error && typeof error === "object" && "code" in error && error.code === "23514") return Response.json({ error: "One or more values are outside the allowed range. Review the field guidance and try again." }, { status: 400 });
+    if (error && typeof error === "object" && "code" in error && error.code === "23502") return Response.json({ error: "A required database field is missing. Reopen this form and enter all required details." }, { status: 400 });
     return Response.json({ error: "The database could not save this record. Check required links and values." }, { status: 400 });
   } finally {
     client.release();
