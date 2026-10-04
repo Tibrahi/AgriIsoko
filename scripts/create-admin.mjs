@@ -39,7 +39,7 @@ try {
   const assignment = await client.query("INSERT INTO user_roles (user_id, role_id, organization_id) SELECT $1, id, $2 FROM roles WHERE name = 'national_admin'", [user.rows[0].id, organization.rows[0].id]);
   if (assignment.rowCount !== 1) throw new Error("The national administrator role is missing. Apply the authentication migration and retry.");
   await client.query("COMMIT");
-  console.log(`Created the initial administrator account for ${email}. Remove ADMIN_PASSWORD from the environment now.`);
+  console.log("Created the initial administrator account. Remove ADMIN_PASSWORD from the environment now.");
 } catch (error) {
   await client.query("ROLLBACK").catch(() => undefined);
   console.error(error instanceof Error ? error.message : "Could not create administrator account.");
