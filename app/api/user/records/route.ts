@@ -118,6 +118,7 @@ export async function POST(request: Request) {
       if (quantity<=0) throw new Error("Order quantity must be greater than zero.");
       const listing=await client.query("SELECT * FROM marketplace_listings WHERE id=$1 AND status='open' AND verification_status='verified' AND (available_from IS NULL OR available_from<=CURRENT_DATE) FOR UPDATE",[listingId]);
       if (!listing.rows[0]) throw new Error("That verified listing is no longer available.");
+      if (listing.rows[0].seller_organization_id === user.organizationId) throw new Error("You cannot place a purchase request with your own organization.");
       const reserved=await client.query("SELECT coalesce(sum(quantity),0)::numeric AS quantity FROM marketplace_orders WHERE listing_id=$1 AND status IN ('requested','accepted','in_delivery')",[listingId]);
       const remaining=Number(listing.rows[0].available_quantity)-Number(reserved.rows[0].quantity);
       if (quantity>remaining) throw new Error("The requested amount exceeds the remaining listed quantity.");

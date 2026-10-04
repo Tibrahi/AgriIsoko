@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { getDashboardData } from "@/lib/agri-data";
 import { getSession, isAdmin } from "@/lib/auth";
-import { redirect } from "next/navigation";
 import AdminQueue from "@/app/admin-queue";
 import { getPersonalWorkspace } from "@/lib/user-workspace";
 
