@@ -4,14 +4,13 @@ AgriIsoko is a Rwanda-focused agricultural marketplace and food intelligence wor
 
 ## Run locally
 
-1. Copy `.env.example` to `.env.local` and set `DATABASE_URL` to the real URI supplied by your PostgreSQL provider:
+1. Copy `.env.example` to `.env.local` and set `DATABASE_URL` to the real URI supplied by Neon:
 
    ```env
    DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DATABASE
    ```
 
-   Replace every placeholder. Percent-encode reserved characters in the username/password. For remote databases, use the provider's TLS-enabled URI and certificate guidance; do not disable certificate verification to make a failing connection pass.
-   The schema requires PostgreSQL 13 or newer. `.env.local` is ignored by Git and read by Next.js and the database setup commands.
+   Replace every placeholder with Neon's connection URI. Use the pooled connection URI for the web app; it has a `-pooler` hostname. Percent-encode reserved characters in the username/password, and keep Neon's `sslmode=require` parameter. The schema requires PostgreSQL 13 or newer. `.env.local` and `.env` are ignored by Git and read by Next.js and the database setup commands. If both files exist, `.env.local` takes precedence.
 
 2. Check the connection and apply the versioned migrations in order:
 
