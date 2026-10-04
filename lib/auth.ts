@@ -11,7 +11,7 @@ const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const HASH_BYTES = 64;
 
 export type AppRole = "farmer" | "buyer" | "cooperative_manager" | "warehouse_manager" | "market_officer" | "sector_officer" | "district_officer" | "national_admin" | "analyst";
-export type SessionUser = { id: string; name: string; email: string; status: "pending" | "active" | "suspended"; roles: AppRole[] };
+export type SessionUser = { id: string; name: string; email: string; organizationId: string | null; status: "pending" | "active" | "suspended" | "rejected"; reviewNote: string | null; roles: AppRole[] };
 
 export function normalizeEmail(value: string) {
   return value.trim().toLowerCase();
@@ -64,7 +64,8 @@ export async function getSession(): Promise<SessionUser | null> {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
   const result = await getPool().query<SessionUser & { role: AppRole | null }>(
-    `SELECT u.id, u.display_name AS name, u.email, u.account_status AS status, r.name AS role
+    `SELECT u.id, u.display_name AS name, u.email, u.organization_id AS "organizationId",
+            u.account_status AS status, u.account_review_note AS "reviewNote", r.name AS role
      FROM auth_sessions s
      JOIN users u ON u.id = s.user_id
      LEFT JOIN user_roles ur ON ur.user_id = u.id
@@ -78,7 +79,9 @@ export async function getSession(): Promise<SessionUser | null> {
     id: first.id,
     name: first.name,
     email: first.email,
+    organizationId: first.organizationId,
     status: first.status,
+    reviewNote: first.reviewNote,
     roles: [...new Set(result.rows.map((row) => row.role).filter((role): role is AppRole => role !== null))],
   };
 }

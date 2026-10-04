@@ -10,7 +10,7 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
   if (!user) redirect("/login");
   if (user.status !== "active") redirect("/");
   const canSeeAnalytics = user.roles.includes("national_admin") || user.roles.includes("analyst");
-  if (!canSeeAnalytics && !user.roles.some((role) => ["farmer", "buyer"].includes(role))) redirect("/");
+  const canSubmitOwnRecords = user.roles.some((role) => ["farmer", "buyer"].includes(role));
   const database = await getDatabaseStatus();
 
   return <main className="app-shell">
@@ -18,7 +18,8 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
       <Link className="brand" href="/dashboard"><span className="brand-mark">A<span>+</span></span><span><strong>AgriIsoko</strong><small>RWANDA FOOD INTELLIGENCE</small></span></Link>
       <div className="workspace-label">WORKSPACE</div>
       <DashboardNavigation admin={isAdmin(user)} items={[
-        ...(canSeeAnalytics ? [["/dashboard", "Overview", "⌂"] as const] : []),
+        ["/dashboard", "Overview", "⌂"],
+        ...(canSubmitOwnRecords ? [["/dashboard/my-records", "My records", "▣"] as const] : []),
         ["/dashboard/marketplace", "Marketplace", "◇"],
         ...(canSeeAnalytics ? [
           ["/dashboard/harvest-reports", "Harvest reports", "◷"] as const,

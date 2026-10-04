@@ -7,10 +7,11 @@ export async function GET() {
   try {
     const admin = await getSession();
     if (!admin || !isAdmin(admin)) return Response.json({ error: "Administrator access is required." }, { status: 403 });
-    const result = await getPool().query<{ id: string; name: string; email: string; organization_type: string; created_at: string }>(
-      `SELECT u.id, u.display_name AS name, u.email, o.organization_type, u.created_at::text
+    const result = await getPool().query<{ id: string; name: string; email: string; organization_type: string; created_at: string; status: string; review_note: string | null }>(
+      `SELECT u.id, u.display_name AS name, u.email, o.organization_type, u.created_at::text,
+              u.account_status AS status, u.account_review_note AS review_note
        FROM users u JOIN organizations o ON o.id = u.organization_id
-       WHERE u.account_status = 'pending' ORDER BY u.created_at ASC LIMIT 100`,
+       WHERE u.account_status IN ('pending', 'rejected') ORDER BY (u.account_status = 'pending') DESC, u.created_at ASC LIMIT 100`,
     );
     return Response.json({ accounts: result.rows });
   } catch {
@@ -23,8 +24,8 @@ export async function PATCH(request: Request) {
   try {
     const admin = await getSession();
     if (!admin || !isAdmin(admin)) return Response.json({ error: "Administrator access is required." }, { status: 403 });
-    const body = await request.json() as { userId?: unknown; status?: unknown; role?: unknown };
-    if (typeof body.userId !== "string" || !/^[0-9a-f-]{36}$/i.test(body.userId) || !["active", "suspended"].includes(String(body.status)) || (body.status === "active" && !["farmer", "buyer", "analyst"].includes(String(body.role)))) {
+    const body = await request.json() as { userId?: unknown; status?: unknown; role?: unknown; reviewNote?: unknown };
+    if (typeof body.userId !== "string" || !/^[0-9a-f-]{36}$/i.test(body.userId) || !["active", "rejected"].includes(String(body.status)) || (body.status === "active" && !["farmer", "buyer", "analyst"].includes(String(body.role))) || (body.reviewNote !== undefined && (typeof body.reviewNote !== "string" || body.reviewNote.length > 500))) {
       return Response.json({ error: "Choose an account and a valid access status." }, { status: 400 });
     }
     const client = await getPool().connect();
@@ -37,11 +38,11 @@ export async function PATCH(request: Request) {
         await client.query("ROLLBACK");
         return Response.json({ error: "That account was not found." }, { status: 404 });
       }
-      if (current.rows[0].account_status !== "pending") {
+      if (!["pending", "rejected"].includes(current.rows[0].account_status)) {
         await client.query("ROLLBACK");
-        return Response.json({ error: "Only pending account requests can be changed from this queue." }, { status: 409 });
+        return Response.json({ error: "Only pending or rejected account requests can be changed from this queue." }, { status: 409 });
       }
-      await client.query("UPDATE users SET account_status = $1 WHERE id = $2", [body.status, body.userId]);
+      await client.query("UPDATE users SET account_status = $1, account_review_note = $2, account_reviewed_at = now(), account_reviewed_by = $3 WHERE id = $4", [body.status, body.status === "rejected" ? String(body.reviewNote ?? "").trim() || null : null, admin.id, body.userId]);
       if (body.status === "active") {
         await client.query("DELETE FROM user_roles WHERE user_id = $1", [body.userId]);
         const assignment = await client.query(
@@ -53,8 +54,8 @@ export async function PATCH(request: Request) {
       }
       await client.query(
         `INSERT INTO audit_events (actor_user_id, entity_type, entity_id, action, before_state, after_state)
-         VALUES ($1, 'user_account', $2, $3, jsonb_build_object('account_status', $4), jsonb_build_object('account_status', $5, 'role', $6))`,
-        [admin.id, body.userId, body.status === "active" ? "account_approved" : "account_suspended", current.rows[0].account_status, body.status, body.status === "active" ? body.role : null],
+         VALUES ($1, 'user_account', $2, $3, jsonb_build_object('account_status', $4), jsonb_build_object('account_status', $5, 'role', $6, 'review_note', $7))`,
+        [admin.id, body.userId, body.status === "active" ? "account_approved" : "account_rejected", current.rows[0].account_status, body.status, body.status === "active" ? body.role : null, body.status === "rejected" ? String(body.reviewNote ?? "").trim() || null : null],
       );
       await client.query("COMMIT");
       return Response.json({ ok: true, status: body.status });

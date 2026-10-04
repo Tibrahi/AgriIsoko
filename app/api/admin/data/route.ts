@@ -81,7 +81,7 @@ function validateValues(entity: string, raw: unknown, fields: readonly AdminFiel
 
 function systemColumns(entity: string, actorId: string, values: Record<string, unknown>) {
   const columns: Record<string, unknown> = { ...values };
-  if (["harvest_reports", "inventory_balances"].includes(entity)) columns.submitted_by = actorId;
+  if (["farms", "harvest_reports", "inventory_balances"].includes(entity)) columns.submitted_by = actorId;
   if (entity === "marketplace_listings" || entity === "marketplace_orders") columns.created_by = actorId;
   if (adminEntities[entity].verification && values.verification_status === "verified") {
     columns.verified_by = actorId;
