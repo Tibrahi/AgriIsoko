@@ -1,4 +1,5 @@
 import pg from "pg";
+import { randomUUID } from "node:crypto";
 import { loadProjectEnv } from "./load-env.mjs";
 
 loadProjectEnv();
@@ -27,6 +28,20 @@ try {
   console.log(`AgriIsoko schema: ${schema.rows[0].harvest_table && schema.rows[0].auth_table ? "present" : "not fully installed"}.`);
   console.log(`Recorded migrations: ${migrations.rows[0].count}.`);
   if (!schema.rows[0].harvest_table || !schema.rows[0].auth_table) process.exitCode = 2;
+  else {
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query("INSERT INTO crops (name, active) VALUES ($1, true)", [`__agriisoko_write_check_${randomUUID()}__`]);
+      await client.query("ROLLBACK");
+      console.log("Database write check: passed (temporary record rolled back).");
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => undefined);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
 } catch (error) {
   const code = error && typeof error === "object" && "code" in error ? String(error.code) : "unknown error";
   console.error(`Database check failed (${code}). Verify DATABASE_URL, network access, credentials, and database permissions.`);

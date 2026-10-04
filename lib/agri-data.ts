@@ -21,6 +21,7 @@ export type MarketplaceData = {
 
 declare global {
   var agriIsokoPool: Pool | undefined;
+  var agriIsokoPoolUrl: string | undefined;
 }
 
 export function getPool() {
@@ -31,6 +32,10 @@ export function getPool() {
   catch { throw new Error("DATABASE_URL is not a valid PostgreSQL URI."); }
   if (!["postgres:", "postgresql:"].includes(parsed.protocol) || !parsed.hostname || parsed.pathname.length < 2) {
     throw new Error("DATABASE_URL must be a PostgreSQL URI with a host and database name.");
+  }
+  if (global.agriIsokoPool && global.agriIsokoPoolUrl !== connectionString) {
+    void global.agriIsokoPool.end().catch(() => undefined);
+    global.agriIsokoPool = undefined;
   }
   if (!global.agriIsokoPool) {
     global.agriIsokoPool = new Pool({
@@ -44,13 +49,22 @@ export function getPool() {
     global.agriIsokoPool.on("error", () => {
       console.error("AgriIsoko PostgreSQL pool reported an idle connection error.");
     });
+    global.agriIsokoPoolUrl = connectionString;
   }
   return global.agriIsokoPool;
 }
 
-function connectionMessage(error?: unknown) {
+export function connectionMessage(error?: unknown) {
   if (!process.env.DATABASE_URL?.trim()) return "DATABASE_URL is missing.";
   if (error instanceof Error && error.message.includes("DATABASE_URL")) return "DATABASE_URL must be a valid PostgreSQL URI with a host and database name.";
+  const code = error && typeof error === "object" && "code" in error ? String(error.code) : "";
+  const detail = error instanceof Error ? error.message : "";
+  if (code === "EAI_AGAIN" || code === "ENOTFOUND" || /getaddrinfo.*EAI_AGAIN|ENOTFOUND/i.test(detail)) return "The Neon hostname could not be resolved. Check the host in DATABASE_URL and the device's DNS or internet connection.";
+  if (code === "ETIMEDOUT" || code === "ECONNREFUSED" || code === "ECONNRESET") return "The Neon server did not respond. Check internet access, Neon project availability, and the connection URI.";
+  if (code === "28P01") return "Neon rejected the database credentials. Check the username and password in DATABASE_URL.";
+  if (code === "3D000") return "The database in DATABASE_URL was not found. Copy the connection URI for the correct Neon database.";
+  if (code === "42501") return "The Neon database user lacks permissions required by AgriIsoko.";
+  if (code === "42P01" || code === "42703") return "Neon is reachable, but the AgriIsoko schema is incomplete. Apply the latest migrations.";
   return "PostgreSQL could not be reached or the AgriIsoko schema is not installed.";
 }
 

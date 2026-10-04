@@ -1,5 +1,5 @@
 import { adminEntities, type AdminField } from "@/lib/admin-data-config";
-import { getPool } from "@/lib/agri-data";
+import { connectionMessage, getPool } from "@/lib/agri-data";
 import { getSession, isAdmin, verifySameOrigin } from "@/lib/auth";
 import type { PoolClient } from "pg";
 
@@ -39,8 +39,8 @@ export async function GET(request: Request) {
       Promise.all([...new Set(config.fields.map((field) => field.reference).filter((v): v is string => Boolean(v)))].map(async (key) => [key, await references[key](pool)] as const)),
     ]);
     return Response.json({ records: records.rows, options: Object.fromEntries(options) }, { headers: { "Cache-Control": "no-store" } });
-  } catch {
-    return Response.json({ error: "Could not load this data from Neon. Confirm the schema is migrated." }, { status: 503 });
+  } catch (error) {
+    return Response.json({ error: connectionMessage(error) }, { status: 503 });
   }
 }
 
@@ -166,7 +166,7 @@ async function mutate(_request: Request, actor: string, entity: string, values: 
   const config = adminEntities[entity];
   let client: PoolClient;
   try { client = await getPool().connect(); }
-  catch { return Response.json({ error: "Neon PostgreSQL could not be reached." }, { status: 503 }); }
+  catch (error) { return Response.json({ error: connectionMessage(error) }, { status: 503 }); }
   try {
     await client.query("BEGIN");
     let previous: Record<string, unknown> | null = null;

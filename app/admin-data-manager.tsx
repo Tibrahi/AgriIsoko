@@ -25,6 +25,7 @@ export default function AdminDataManager({ initialEntity = "crops" }: { initialE
   const [form, setForm] = useState<Record<string, string | boolean>>(() => Object.fromEntries((adminEntities[initialEntity] ?? adminEntities.crops).fields.map((field) => [field.name, initialValue(field)])));
   const [editing, setEditing] = useState<RecordRow | null>(null);
   const [loading, setLoading] = useState(true);
+  const [dataReady, setDataReady] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -33,12 +34,12 @@ export default function AdminDataManager({ initialEntity = "crops" }: { initialE
   const columns = useMemo(() => fields.filter((field) => !["notes", "source_reference", "farm_id", "season_id", "cultivated_area_ha"].includes(field.name)).slice(0, 7), [fields]);
 
   const load = useCallback(async (kind: string) => {
-    setLoading(true); setError("");
+    setLoading(true); setDataReady(false); setError("");
     try {
       const response = await fetch(`/api/admin/data?entity=${encodeURIComponent(kind)}`, { cache: "no-store" });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Could not load records.");
-      setRecords(data.records); setOptions(data.options);
+      setRecords(data.records); setOptions(data.options); setDataReady(true);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not load records."); }
     finally { setLoading(false); }
   }, []);
@@ -50,7 +51,7 @@ export default function AdminDataManager({ initialEntity = "crops" }: { initialE
       .then(({ response, data }) => {
         if (!active) return;
         if (!response.ok) throw new Error(data.error ?? "Could not load records.");
-        setRecords(data.records); setOptions(data.options); setLoading(false);
+        setRecords(data.records); setOptions(data.options); setDataReady(true); setLoading(false);
       })
       .catch((cause: unknown) => { if (active) { setError(cause instanceof Error ? cause.message : "Could not load records."); setLoading(false); } });
     return () => { active = false; };
@@ -124,7 +125,7 @@ export default function AdminDataManager({ initialEntity = "crops" }: { initialE
       <section className="panel glass-panel route-panel admin-data-form-panel" id="admin-data-form"><div className="panel-header"><div><p className="eyebrow">{editing ? "EDIT RECORD" : "NEW RECORD"}</p><h2>{editing ? "Update " : "Add "}{config.label.toLowerCase()}</h2></div></div>
         {fields.some((field) => field.reference && !(options[field.reference]?.length)) && <p className="auth-message error setup-hint">This form needs linked records first. Create the required crops, locations, organizations, or seasons using the text data set field above, then return here.</p>}
         <form className="admin-data-form" onSubmit={save}>{fields.map((field) => <Field key={field.name} field={field} value={form[field.name] ?? initialValue(field)} options={field.reference ? options[field.reference] ?? [] : []} onChange={(value) => setForm((current) => ({ ...current, [field.name]: value }))}/>)}
-          <div className="admin-form-actions"><button className="primary-button" disabled={saving || fields.some((field) => field.required && field.reference && !(options[field.reference]?.length))}>{saving ? "Saving…" : editing ? "Save changes" : "Create record"}</button>{editing && <button type="button" className="refresh-button" onClick={resetForm}>Cancel edit</button>}</div>
+          <div className="admin-form-actions"><button className="primary-button" disabled={saving || !dataReady || fields.some((field) => field.required && field.reference && !(options[field.reference]?.length))}>{saving ? "Saving…" : editing ? "Save changes" : "Create record"}</button>{editing && <button type="button" className="refresh-button" onClick={resetForm}>Cancel edit</button>}</div>
         </form><p className="route-note">Administrative changes are attributed to your account. Verified records include your verification identity and timestamp.</p>
       </section>
     </div>
@@ -133,9 +134,10 @@ export default function AdminDataManager({ initialEntity = "crops" }: { initialE
 
 function Field({ field, value, options, onChange }: { field: AdminField; value: string | boolean; options: Option[]; onChange: (value: string | boolean) => void }) {
   if (field.type === "checkbox") return <label className="admin-check-field"><input type="checkbox" checked={Boolean(value)} onChange={(event) => onChange(event.target.checked)}/>{field.label}</label>;
+  if (field.options) return <label className="admin-data-field">{field.label}<select required={field.required} value={String(value)} onChange={(event) => onChange(event.target.value)}><option value="">Choose {field.label.toLocaleLowerCase()}</option>{field.options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>;
   const common = { required: field.required, value: String(value), onChange: (event: React.ChangeEvent<HTMLInputElement>) => onChange(event.target.value), placeholder: field.reference ? `Type ${field.label.toLocaleLowerCase()}` : field.options ? `Type a ${field.label.toLocaleLowerCase()}` : undefined };
   const matches = options.filter((option) => !String(value).trim() || option.label.toLocaleLowerCase().includes(String(value).trim().toLocaleLowerCase())).slice(0,8);
-  return <label className="admin-data-field">{field.label}<input {...common} type={field.type === "number" ? "number" : field.type === "reference" ? "text" : field.type} min={field.type === "number" ? "0" : undefined} step={field.type === "number" ? "any" : undefined}/>{field.reference&&<small className="field-hint">{options.length ? String(value).trim() ? `Matching records: ${matches.map((option)=>option.label).join("; ") || "no match"}${matches.length===8?"; type more to narrow results":""}` : `${options.length} linked records available. Type part of a name to find a match.` : "No linked records yet. Add them first using the data set field."}</small>}{field.options&&<small className="field-hint">Type one of: {field.options.map((option)=>option.label).join(", ")}</small>}</label>;
+  return <label className="admin-data-field">{field.label}<input {...common} type={field.type === "number" ? "number" : field.type === "reference" ? "text" : field.type} min={field.type === "number" ? "0" : undefined} step={field.type === "number" ? "any" : undefined}/>{field.reference&&<small className="field-hint">{options.length ? String(value).trim() ? `Type an exact matching value from: ${matches.map((option)=>option.label).join("; ") || "no matches — use an existing record name"}${matches.length===8?"; type more to narrow results":""}` : `${options.length} existing records. Type a name, then enter the exact matching value shown here.` : "No existing records yet. Add the linked record first using the data set field."}</small>}</label>;
 }
 
 function recordTitle(row: RecordRow, entity: string) {

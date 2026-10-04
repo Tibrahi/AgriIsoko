@@ -1,9 +1,13 @@
-import { getPool } from "@/lib/agri-data";
+import { connectionMessage, getPool } from "@/lib/agri-data";
 import { getSession, verifySameOrigin } from "@/lib/auth";
 import type { PoolClient } from "pg";
 
 export const runtime = "nodejs";
 const uuid = /^[0-9a-f-]{36}$/i;
+
+function databaseUnavailable(error: unknown) {
+  return connectionMessage(error);
+}
 
 async function activeProducer() {
   const user = await getSession();
@@ -31,8 +35,8 @@ export async function GET() {
     };
     const entries = await Promise.all(Object.entries(queries).map(async ([key, promise]) => [key, (await promise).rows] as const));
     return Response.json(Object.fromEntries(entries), { headers: { "Cache-Control": "no-store" } });
-  } catch {
-    return Response.json({ error: "Your records could not be loaded. Check the database connection and latest migrations." }, { status: 503 });
+  } catch (error) {
+    return Response.json({ error: databaseUnavailable(error) }, { status: 503 });
   }
 }
 
@@ -83,9 +87,9 @@ export async function POST(request: Request) {
   const farmer = user.roles.includes("farmer");
   if ((!farmer && kind !== "marketplace_orders") || (farmer && !["farms","harvest_reports","inventory_balances","marketplace_listings","marketplace_orders"].includes(kind))) return Response.json({ error: "This record type is not enabled for your role." }, { status: 403 });
   if (!values) return Response.json({ error: "Enter record details." }, { status: 400 });
-  const pool = getPool();
-  const client = await pool.connect().catch(() => null);
-  if (!client) return Response.json({ error: "Neon PostgreSQL could not be reached." }, { status: 503 });
+  let client: PoolClient;
+  try { client = await getPool().connect(); }
+  catch (error) { return Response.json({ error: databaseUnavailable(error) }, { status: 503 }); }
   try {
     await client.query("BEGIN");
     let result;
@@ -142,7 +146,7 @@ export async function PATCH(request: Request) {
   let body:Record<string,unknown>; try{body=object(await request.json());}catch{return Response.json({error:"Enter a valid update."},{status:400});}
   const kind=String(body.kind??""); let recordId:string; try{recordId=id(body.id,"record")!;}catch(error){return Response.json({error:error instanceof Error?error.message:"Choose a valid record."},{status:400});}
   const values=(()=>{try{return object(body.values);}catch{return {};}})();
-  const client=await getPool().connect().catch(()=>null); if(!client)return Response.json({error:"Neon PostgreSQL could not be reached."},{status:503});
+  let client:PoolClient;try{client=await getPool().connect();}catch(error){return Response.json({error:databaseUnavailable(error)},{status:503});}
   try{
     await client.query("BEGIN");
     let old;
@@ -188,6 +192,6 @@ export async function DELETE(request: Request) {
   const kind=String(body.kind??"");let recordId:string;try{recordId=id(body.id,"record")!;}catch(error){return Response.json({error:error instanceof Error?error.message:"Choose a valid record."},{status:400});}
   const ownership:Record<string,string>={farms:"submitted_by",harvest_reports:"submitted_by",inventory_balances:"submitted_by",marketplace_listings:"created_by"};
   if(!Object.hasOwn(ownership,kind)||!user.roles.includes("farmer"))return Response.json({error:"This record cannot be deleted from your account."},{status:403});
-  const client=await getPool().connect().catch(()=>null);if(!client)return Response.json({error:"Neon PostgreSQL could not be reached."},{status:503});
+  let client:PoolClient;try{client=await getPool().connect();}catch(error){return Response.json({error:databaseUnavailable(error)},{status:503});}
   try{await client.query("BEGIN");const old=await client.query(`SELECT * FROM ${kind} WHERE id=$1 AND ${ownership[kind]}=$2 FOR UPDATE`,[recordId,user.id]);if(!old.rows[0]){await client.query("ROLLBACK");return Response.json({error:"Record not found in your workspace."},{status:404});}if(old.rows[0].verification_status==="verified")throw new Error("Verified records cannot be deleted. Contact an administrator to request a correction.");await client.query(`DELETE FROM ${kind} WHERE id=$1`,[recordId]);await writeAudit(client,user.id,kind,recordId,"user_deleted",old.rows[0],null);await client.query("COMMIT");return Response.json({ok:true});}catch(error){await client.query("ROLLBACK").catch(()=>undefined);if(error&&typeof error==="object"&&"code"in error&&error.code==="23503")return Response.json({error:"This record is linked to other records and cannot be deleted."},{status:409});return Response.json({error:error instanceof Error?error.message:"Could not delete record."},{status:400});}finally{client.release();}
 }
