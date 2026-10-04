@@ -1,5 +1,5 @@
 import "server-only";
-import { getPool } from "@/lib/agri-data";
+import { connectionMessage, getPool } from "@/lib/agri-data";
 import type { QueryResultRow } from "pg";
 
 export type DataResult<T> = { available: true; rows: T[]; page: number; pages: number; total: number } | { available: false; rows: []; page: number; pages: number; total: 0; message: string };
@@ -19,9 +19,7 @@ async function queryRows<T extends QueryResultRow>(sql: string, values: unknown[
     const result = await pool.query<T>(sql, values);
     return { available: true, rows: result.rows, page: 1, pages: 1, total: result.rowCount ?? result.rows.length };
   } catch (error) {
-    const code = error && typeof error === "object" && "code" in error ? String(error.code) : "";
-    const message = code === "42P01" || code === "42703" ? "The AgriIsoko schema is incomplete. Apply the latest migrations." : code === "EAI_AGAIN" || code === "ENOTFOUND" ? "The Neon host could not be resolved. Check the connection URI and network DNS." : "Database records could not be loaded. Check the Neon connection and database permissions.";
-    return { available: false, rows: [], page: Math.max(1,page), pages: 1, total: 0, message };
+    return { available: false, rows: [], page: Math.max(1,page), pages: 1, total: 0, message: connectionMessage(error) };
   }
 }
 

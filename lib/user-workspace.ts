@@ -1,6 +1,6 @@
 import "server-only";
 import type { SessionUser } from "@/lib/auth";
-import { getPool } from "@/lib/agri-data";
+import { connectionMessage, getPool } from "@/lib/agri-data";
 
 export async function getPersonalWorkspace(user: SessionUser) {
   try {
@@ -20,8 +20,8 @@ export async function getPersonalWorkspace(user: SessionUser) {
          WHERE h.submitted_by=$1 ORDER BY h.created_at DESC LIMIT 5`, [user.id],
       ),
     ]);
-    return { available: true as const, ...counts.rows[0], reports: reports.rows };
-  } catch {
-    return { available: false as const, farms: "0", harvests: "0", inventory: "0", listings: "0", orders: "0", reports: [] as { id: string; crop: string; quantity: string; district: string; status: string; report_date: string }[] };
+    return { available: true as const, message: "", ...counts.rows[0], reports: reports.rows };
+  } catch (error) {
+    return { available: false as const, message: connectionMessage(error), farms: "0", harvests: "0", inventory: "0", listings: "0", orders: "0", reports: [] as { id: string; crop: string; quantity: string; district: string; status: string; report_date: string }[] };
   }
 }

@@ -71,6 +71,12 @@ export function connectionMessage(error?: unknown) {
   return "PostgreSQL could not be reached or the AgriIsoko schema is not installed.";
 }
 
+export function isDatabaseConnectionError(error: unknown) {
+  const code = error && typeof error === "object" && "code" in error ? String(error.code) : "";
+  const detail = error instanceof Error ? error.message : "";
+  return ["EAI_AGAIN", "ENOTFOUND", "ETIMEDOUT", "ECONNREFUSED", "ECONNRESET", "57P03", "08000", "08003", "08006"].includes(code) || /getaddrinfo.*EAI_AGAIN|ENOTFOUND|connection terminated unexpectedly/i.test(detail);
+}
+
 export async function getDatabaseStatus(): Promise<{ status: "connected" | "unavailable"; message: string; version?: string }> {
   try {
     const result = await getPool().query<{ version: string; schema_ready: boolean; write_ready: boolean }>(`

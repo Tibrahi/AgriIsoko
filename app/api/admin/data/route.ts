@@ -1,5 +1,5 @@
 import { adminEntities, type AdminField } from "@/lib/admin-data-config";
-import { connectionMessage, getPool } from "@/lib/agri-data";
+import { connectionMessage, getPool, isDatabaseConnectionError } from "@/lib/agri-data";
 import { getSession, isAdmin, verifySameOrigin } from "@/lib/auth";
 import type { PoolClient } from "pg";
 
@@ -198,6 +198,7 @@ async function mutate(_request: Request, actor: string, entity: string, values: 
     return Response.json({ ok: true, record: result.rows[0] ?? null });
   } catch (error) {
     await client.query("ROLLBACK").catch(() => undefined);
+    if (isDatabaseConnectionError(error)) return Response.json({ error: connectionMessage(error) }, { status: 503 });
     if (error && typeof error === "object" && "code" in error && error.code === "23503") return Response.json({ error: "This record is linked to other records and cannot be removed or changed in this way." }, { status: 409 });
     if (error && typeof error === "object" && "code" in error && error.code === "23505") return Response.json({ error: "A record with these unique details already exists." }, { status: 409 });
     if (error && typeof error === "object" && "code" in error && error.code === "23514") return Response.json({ error: "One or more values are outside the allowed range. Review the field guidance and try again." }, { status: 400 });

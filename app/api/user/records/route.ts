@@ -1,4 +1,4 @@
-import { connectionMessage, getPool } from "@/lib/agri-data";
+import { connectionMessage, getPool, isDatabaseConnectionError } from "@/lib/agri-data";
 import { getSession, verifySameOrigin } from "@/lib/auth";
 import type { PoolClient } from "pg";
 
@@ -158,6 +158,7 @@ export async function POST(request: Request) {
     return Response.json({ ok:true,record:result.rows[0] },{status:201});
   } catch(error) {
     await client.query("ROLLBACK").catch(()=>undefined);
+    if(isDatabaseConnectionError(error)) return Response.json({error:connectionMessage(error)},{status:503});
     if (error && typeof error === "object" && "code" in error && error.code === "23503") return Response.json({error:"Choose a linked record that exists and is available."},{status:400});
     return Response.json({error:error instanceof Error?error.message:"Could not save your record."},{status:400});
   } finally { client.release(); }
@@ -206,7 +207,7 @@ export async function PATCH(request: Request) {
       if(next==="completed") await client.query("UPDATE marketplace_listings SET available_quantity=greatest(available_quantity-$1,0), status=CASE WHEN available_quantity<=$1 THEN 'fulfilled' ELSE status END WHERE id=$2",[previous.quantity,previous.listing_id]);
     }
     await writeAudit(client,user.id,kind,recordId,"user_updated",previous,result.rows[0]);await client.query("COMMIT");return Response.json({ok:true,record:result.rows[0]});
-  }catch(error){await client.query("ROLLBACK").catch(()=>undefined);return Response.json({error:error instanceof Error?error.message:"Could not update your record."},{status:400});}finally{client.release();}
+  }catch(error){await client.query("ROLLBACK").catch(()=>undefined);return Response.json({error:isDatabaseConnectionError(error)?connectionMessage(error):error instanceof Error?error.message:"Could not update your record."},{status:isDatabaseConnectionError(error)?503:400});}finally{client.release();}
 }
 
 export async function DELETE(request: Request) {
@@ -216,5 +217,5 @@ export async function DELETE(request: Request) {
   const ownership:Record<string,string>={farms:"submitted_by",harvest_reports:"submitted_by",inventory_balances:"submitted_by",marketplace_listings:"created_by"};
   if(!Object.hasOwn(ownership,kind)||!user.roles.includes("farmer"))return Response.json({error:"This record cannot be deleted from your account."},{status:403});
   let client:PoolClient;try{client=await getPool().connect();}catch(error){return Response.json({error:databaseUnavailable(error)},{status:503});}
-  try{await client.query("BEGIN");const old=await client.query(`SELECT * FROM ${kind} WHERE id=$1 AND ${ownership[kind]}=$2 FOR UPDATE`,[recordId,user.id]);if(!old.rows[0]){await client.query("ROLLBACK");return Response.json({error:"Record not found in your workspace."},{status:404});}if(old.rows[0].verification_status==="verified")throw new Error("Verified records cannot be deleted. Contact an administrator to request a correction.");await client.query(`DELETE FROM ${kind} WHERE id=$1`,[recordId]);await writeAudit(client,user.id,kind,recordId,"user_deleted",old.rows[0],null);await client.query("COMMIT");return Response.json({ok:true});}catch(error){await client.query("ROLLBACK").catch(()=>undefined);if(error&&typeof error==="object"&&"code"in error&&error.code==="23503")return Response.json({error:"This record is linked to other records and cannot be deleted."},{status:409});return Response.json({error:error instanceof Error?error.message:"Could not delete record."},{status:400});}finally{client.release();}
+  try{await client.query("BEGIN");const old=await client.query(`SELECT * FROM ${kind} WHERE id=$1 AND ${ownership[kind]}=$2 FOR UPDATE`,[recordId,user.id]);if(!old.rows[0]){await client.query("ROLLBACK");return Response.json({error:"Record not found in your workspace."},{status:404});}if(old.rows[0].verification_status==="verified")throw new Error("Verified records cannot be deleted. Contact an administrator to request a correction.");await client.query(`DELETE FROM ${kind} WHERE id=$1`,[recordId]);await writeAudit(client,user.id,kind,recordId,"user_deleted",old.rows[0],null);await client.query("COMMIT");return Response.json({ok:true});}catch(error){await client.query("ROLLBACK").catch(()=>undefined);if(isDatabaseConnectionError(error))return Response.json({error:connectionMessage(error)},{status:503});if(error&&typeof error==="object"&&"code"in error&&error.code==="23503")return Response.json({error:"This record is linked to other records and cannot be deleted."},{status:409});return Response.json({error:error instanceof Error?error.message:"Could not delete record."},{status:400});}finally{client.release();}
 }
