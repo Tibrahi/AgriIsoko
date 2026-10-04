@@ -13,14 +13,45 @@ export type DashboardData = {
   recentReports: Array<{ id: string; crop: string; location: string; quantity: number; unit: string; status: string; reportDate: string }>;
 };
 
+export type MarketplaceData = {
+  status: "connected" | "unavailable";
+  message: string;
+  listings: Array<{ id: string; crop: string; seller: string; district: string; quantity: number; unit: string; price: number | null; currency: string; availableFrom: string | null }>;
+};
+
 declare global {
   var agriIsokoPool: Pool | undefined;
 }
 
 export function getPool() {
-  if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is not configured.");
-  global.agriIsokoPool ??= new Pool({ connectionString: process.env.DATABASE_URL, max: 5, connectionTimeoutMillis: 2500, idleTimeoutMillis: 10000 });
+  const connectionString = process.env.DATABASE_URL?.trim();
+  if (!connectionString) throw new Error("DATABASE_URL is not configured.");
+  let parsed: URL;
+  try { parsed = new URL(connectionString); }
+  catch { throw new Error("DATABASE_URL is not a valid PostgreSQL URI."); }
+  if (!["postgres:", "postgresql:"].includes(parsed.protocol) || !parsed.hostname || parsed.pathname.length < 2) {
+    throw new Error("DATABASE_URL must be a PostgreSQL URI with a host and database name.");
+  }
+  if (!global.agriIsokoPool) {
+    global.agriIsokoPool = new Pool({
+      connectionString,
+      max: 5,
+      connectionTimeoutMillis: 5000,
+      idleTimeoutMillis: 10000,
+      query_timeout: 10000,
+      statement_timeout: 10000,
+    });
+    global.agriIsokoPool.on("error", () => {
+      console.error("AgriIsoko PostgreSQL pool reported an idle connection error.");
+    });
+  }
   return global.agriIsokoPool;
+}
+
+function connectionMessage(error?: unknown) {
+  if (!process.env.DATABASE_URL?.trim()) return "DATABASE_URL is missing.";
+  if (error instanceof Error && error.message.includes("DATABASE_URL")) return "DATABASE_URL must be a valid PostgreSQL URI with a host and database name.";
+  return "PostgreSQL could not be reached or the AgriIsoko schema is not installed.";
 }
 
 export async function getDashboardData(): Promise<DashboardData> {
@@ -79,10 +110,9 @@ export async function getDashboardData(): Promise<DashboardData> {
       })),
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "The database could not be reached.";
     return {
       status: "unavailable",
-      message: message.includes("DATABASE_URL") ? "DATABASE_URL is missing." : "PostgreSQL could not be reached or the AgriIsoko schema is not installed.",
+      message: connectionMessage(error),
       harvestTonnes: 0,
       harvestReports: 0,
       availableTonnes: 0,
@@ -90,5 +120,34 @@ export async function getDashboardData(): Promise<DashboardData> {
       pendingReports: 0,
       recentReports: [],
     };
+  }
+}
+
+export async function getMarketplaceData(): Promise<MarketplaceData> {
+  try {
+    const result = await getPool().query<{
+      id: string; crop: string; seller: string; district: string; quantity: string;
+      unit: string; price: string | null; currency: string; available_from: string | null;
+    }>(`
+      SELECT l.id, c.name AS crop, o.name AS seller, g.district_name AS district,
+             l.available_quantity::text AS quantity, l.unit,
+             l.price_per_unit::text AS price, l.currency, l.available_from::text
+      FROM marketplace_listings l
+      JOIN crops c ON c.id = l.crop_id
+      JOIN organizations o ON o.id = l.seller_organization_id
+      JOIN geographies g ON g.id = l.geography_id
+      WHERE l.status = 'open' AND l.verification_status = 'verified'
+        AND l.available_quantity > 0
+        AND (l.available_from IS NULL OR l.available_from <= CURRENT_DATE)
+      ORDER BY l.created_at DESC
+      LIMIT 40
+    `);
+    return { status: "connected", message: "", listings: result.rows.map((row) => ({
+      id: row.id, crop: row.crop, seller: row.seller, district: row.district,
+      quantity: Number(row.quantity), unit: row.unit, price: row.price === null ? null : Number(row.price),
+      currency: row.currency, availableFrom: row.available_from,
+    })) };
+  } catch (error) {
+    return { status: "unavailable", message: connectionMessage(error), listings: [] };
   }
 }

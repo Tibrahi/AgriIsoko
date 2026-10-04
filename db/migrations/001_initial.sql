@@ -1,15 +1,20 @@
 BEGIN;
 
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
 CREATE TABLE IF NOT EXISTS geographies (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   country_code char(2) NOT NULL DEFAULT 'RW',
   district_name text NOT NULL,
   sector_name text,
   cell_name text,
-  village_name text,
-  UNIQUE NULLS NOT DISTINCT (country_code, district_name, sector_name, cell_name, village_name)
+  village_name text
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS geographies_natural_key_idx ON geographies (
+  country_code,
+  lower(district_name),
+  coalesce(lower(sector_name), ''),
+  coalesce(lower(cell_name), ''),
+  coalesce(lower(village_name), '')
 );
 
 CREATE TABLE IF NOT EXISTS organizations (

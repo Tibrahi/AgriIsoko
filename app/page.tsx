@@ -1,4 +1,4 @@
-import { getDashboardData } from "@/lib/agri-data";
+import { getDashboardData, getMarketplaceData } from "@/lib/agri-data";
 import { getSession, isAdmin } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import AdminQueue from "@/app/admin-queue";
@@ -16,6 +16,7 @@ export default async function Home() {
   if (!user) redirect("/login");
   if (user.status === "pending") return <AccessPage title="Your account is waiting for approval" copy="An AgriIsoko administrator must approve your account before you can enter the workspace. You can sign out and return later." user={user.name} />;
   if (user.status === "suspended") return <AccessPage title="This account is suspended" copy="Workspace access has been paused. Contact your AgriIsoko administrator if you think this is a mistake." user={user.name} />;
+  if (user.roles.includes("farmer") || user.roles.includes("buyer")) return <MarketplacePage user={user} />;
   if (!user.roles.includes("national_admin") && !user.roles.includes("analyst")) return <AccessPage title="Your workspace is being prepared" copy={`You are signed in as ${user.roles.map((role) => role.replaceAll("_", " ")).join(", ") || "a user"}. This account is active, but its role-specific tools are not enabled in this version yet.`} user={user.name} />;
   const data = await getDashboardData();
 
@@ -110,4 +111,15 @@ function SignOutButton() {
 
 function AccessPage({ title, copy, user }: { title: string; copy: string; user: string }) {
   return <main className="auth-page"><section className="auth-card glass-panel access-card"><Link className="brand auth-brand" href="/"><span className="brand-mark">A<span>+</span></span><span><strong>AgriIsoko</strong><small>RWANDA FOOD INTELLIGENCE</small></span></Link><div className="access-mark">⌑</div><p className="eyebrow">ACCOUNT ACCESS</p><h1>{title}</h1><p className="auth-intro">{copy}</p><div className="signed-user"><div className="avatar">{user.slice(0, 1).toUpperCase()}</div><span><strong>{user}</strong><small>Signed in</small></span><SignOutButton /></div></section><p className="auth-foot">AgriIsoko <i>•</i> Rwanda agricultural marketplace &amp; food intelligence</p></main>;
+}
+
+async function MarketplacePage({ user }: { user: { name: string; roles: string[] } }) {
+  const data = await getMarketplaceData();
+  return <main className="marketplace-page">
+    <header className="marketplace-top"><Link className="brand" href="/"><span className="brand-mark">A<span>+</span></span><span><strong>AgriIsoko</strong><small>RWANDA FOOD INTELLIGENCE</small></span></Link><div className="marketplace-account"><span>{user.roles.join(" / ")}</span><div className="avatar">{user.name.slice(0, 1).toUpperCase()}</div><SignOutButton /></div></header>
+    <section className="marketplace-heading"><div><p className="eyebrow">VERIFIED PRODUCE LISTINGS</p><h1>Marketplace<span>.</span></h1><p>Browse open listings approved by AgriIsoko reviewers. Availability can change; contact the seller to confirm before arranging a purchase.</p></div><div className="live-chip"><i/> Live PostgreSQL records</div></section>
+    {data.status === "unavailable" && <div className="status-banner"><span className="status-symbol">!</span><div><strong>Marketplace data is unavailable</strong><p>{data.message} No listings are being shown until the database is available.</p></div></div>}
+    {data.status === "connected" && data.listings.length === 0 ? <div className="panel glass-panel marketplace-empty"><div className="market-symbol">⌕</div><h2>No verified listings yet</h2><p>When a seller submits a listing and an authorized reviewer verifies it, it will appear here.</p></div> : <div className="listing-grid">{data.listings.map((listing) => <article className="listing-card glass-panel" key={listing.id}><div className="listing-card-top"><span className="listing-crop-icon">{listing.crop.slice(0, 1).toUpperCase()}</span><span className="verified-chip">✓ Verified</span></div><h2>{listing.crop}</h2><p className="listing-seller">{listing.seller}</p><div className="listing-meta"><span>⌖ {listing.district}</span><span>◷ {listing.availableFrom ? `From ${listing.availableFrom}` : "Available now"}</span></div><div className="listing-bottom"><div><small>Available quantity</small><strong>{formatNumber(listing.quantity)} {listing.unit}</strong></div><div className="listing-price"><small>Asking price</small><strong>{listing.price === null ? "By agreement" : `${listing.currency} ${formatNumber(listing.price)} / ${listing.unit}`}</strong></div></div></article>)}</div>}
+    <footer className="footer marketplace-footer"><span>Listings shown are verified AgriIsoko records, not a national inventory.</span><span>Orders and payments are not enabled in this release.</span></footer>
+  </main>;
 }

@@ -53,10 +53,11 @@ export async function createSession(userId: string) {
 export async function revokeCurrentSession() {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
-  if (token) {
-    await getPool().query("DELETE FROM auth_sessions WHERE token_hash = $1", [hashSessionToken(token)]);
+  try {
+    if (token) await getPool().query("DELETE FROM auth_sessions WHERE token_hash = $1", [hashSessionToken(token)]);
+  } finally {
+    cookieStore.delete(SESSION_COOKIE);
   }
-  cookieStore.delete(SESSION_COOKIE);
 }
 
 export async function getSession(): Promise<SessionUser | null> {

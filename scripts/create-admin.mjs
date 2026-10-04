@@ -1,5 +1,8 @@
 import { scryptSync, randomBytes } from "node:crypto";
 import pg from "pg";
+import { loadProjectEnv } from "./load-env.mjs";
+
+loadProjectEnv();
 
 const { Pool } = pg;
 const { DATABASE_URL, ADMIN_EMAIL, ADMIN_NAME, ADMIN_PASSWORD } = process.env;

@@ -4,20 +4,32 @@ AgriIsoko is a Rwanda-focused agricultural marketplace and food intelligence wor
 
 ## Run locally
 
-1. Provide a PostgreSQL connection string in `.env.local`:
+1. Copy `.env.example` to `.env.local` and set `DATABASE_URL` to the real URI supplied by your PostgreSQL provider:
 
    ```env
    DATABASE_URL=postgresql://USER:PASSWORD@HOST:PORT/DATABASE
    ```
 
-2. Apply `db/migrations/001_initial.sql` to the configured database using your PostgreSQL migration/deployment process. The application does not run migrations automatically and will not reset or seed database records.
-3. Start the Next.js development server with `npm run dev`.
+   Replace every placeholder. Percent-encode reserved characters in the username/password. For remote databases, use the provider's TLS-enabled URI and certificate guidance; do not disable certificate verification to make a failing connection pass.
+   The schema requires PostgreSQL 13 or newer. `.env.local` is ignored by Git and read by Next.js and the database setup commands.
+
+2. Check the connection and apply the versioned migrations in order:
+
+   ```sh
+   npm run db:check
+   npm run db:migrate
+   npm run db:check
+   ```
+
+   The first check confirms the connection/version; it reports that the schema is missing until migrations are applied. The migration command uses a PostgreSQL advisory lock and a migration ledger, and does not reset or seed records.
+3. Provision the first administrator by temporarily setting `ADMIN_EMAIL`, `ADMIN_NAME`, and a unique `ADMIN_PASSWORD` of at least 16 characters in `.env.local`, then run `npm run create-admin`. Remove `ADMIN_PASSWORD` from `.env.local` after it succeeds.
+4. Start the Next.js development server with `npm run dev`.
 
 Without `DATABASE_URL`, or when the database/schema is unreachable, sign-in and registration explain the setup requirement. When the database is reachable but has no records, indicators show zero and report tables use a genuine empty state.
 
 ## Initial schema
 
-Apply migrations in order. The first defines core agricultural entities; the second adds accounts, role assignments, and hashed server-side sessions. The application never creates or resets the schema at runtime.
+The migration runner applies the SQL files in order. The first defines core agricultural entities; the second adds accounts, role assignments, and hashed server-side sessions. The application never creates or resets the schema at runtime.
 
 ## Accounts and access
 
