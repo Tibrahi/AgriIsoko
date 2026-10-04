@@ -35,7 +35,7 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
     {registering && <label>Full name<input name="name" autoComplete="name" required minLength={2} maxLength={100} placeholder="Your name" /></label>}
     <label>Email address<input name="email" type="email" autoComplete="email" required maxLength={254} placeholder="you@example.com" /></label>
     <label>Password<input name="password" type="password" autoComplete={registering ? "new-password" : "current-password"} required minLength={registering ? 12 : 1} maxLength={256} placeholder={registering ? "At least 12 characters" : "Your password"} /></label>
-    {registering && <label>Account type<select name="role" defaultValue="farmer"><option value="farmer">Farmer / producer</option><option value="buyer">Buyer</option></select><small>Other staff roles are assigned by an administrator.</small></label>}
+    {registering && <label>Account type<input name="role" type="text" defaultValue="farmer" placeholder="Type farmer or buyer" required/><small>Type farmer or buyer. Other staff roles are assigned by an administrator.</small></label>}
     {error && <p className="auth-message error" role="alert">{error}</p>}
     {success && <p className="auth-message success" role="status">{success}</p>}
     <button className="primary-button auth-submit" disabled={busy}>{busy ? "Please wait…" : registering ? "Request an account" : "Sign in"}<span>→</span></button>

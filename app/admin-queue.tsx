@@ -40,8 +40,9 @@ export default function AdminQueue() {
   async function update(userId: string, status: "active" | "rejected") {
     setError("");
     try {
+      const role = (assignments[userId] ?? (accounts.find((account) => account.id === userId)?.organization_type === "buyer" ? "buyer" : "farmer")).trim().toLocaleLowerCase().replaceAll(" ", "_");
       const response = await fetch("/api/admin/accounts", {
-        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId, status, reviewNote: reasons[userId] ?? "", role: assignments[userId] ?? "farmer" }),
+        method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId, status, reviewNote: reasons[userId] ?? "", role }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Could not update account.");
@@ -55,7 +56,7 @@ export default function AdminQueue() {
     {error && <p className="auth-message error" role="alert">{error}</p>}
     {loading ? <p className="admin-empty">Loading requests…</p> : accounts.length === 0 ? <p className="admin-empty">No account requests are waiting for review.</p> : <div className="account-list">{accounts.map((account) => <article className="account-row" key={account.id}>
       <div className="avatar account-avatar">{account.name.slice(0, 1).toUpperCase()}</div><div className="account-detail"><strong>{account.name} <span className={`badge ${account.status}`}>{account.status}</span></strong><small>{account.email} · {account.organization_type.replaceAll("_", " ")}</small>{account.review_note&&<small>Previous note: {account.review_note}</small>}</div>
-      <select className="role-select" value={assignments[account.id] ?? (account.organization_type === "buyer" ? "buyer" : "farmer")} onChange={(event) => setAssignments((current) => ({ ...current, [account.id]: event.target.value }))} aria-label={`Assign role to ${account.name}`}><option value="farmer">Farmer</option><option value="buyer">Buyer</option><option value="analyst">Analyst</option></select>
+      <label className="role-field"><span>Role</span><input className="role-text" type="text" value={assignments[account.id] ?? (account.organization_type === "buyer" ? "buyer" : "farmer")} onChange={(event) => setAssignments((current) => ({ ...current, [account.id]: event.target.value }))} aria-label={`Assign role to ${account.name}`} /><small>Type farmer, buyer, or analyst.</small></label>
       {account.status === "pending" && <textarea className="account-review-note" maxLength={500} placeholder="Optional note for a rejected request" value={reasons[account.id] ?? ""} onChange={(event) => setReasons((current) => ({ ...current, [account.id]: event.target.value }))} aria-label={`Review note for ${account.name}`} />}
       <button className="approve-button" onClick={() => void update(account.id, "active")}>{account.status === "rejected" ? "Reconsider" : "Approve"}</button>
       {account.status === "pending" && <button className="reject-button" onClick={() => void update(account.id, "rejected")}>Reject</button>}

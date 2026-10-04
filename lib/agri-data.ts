@@ -54,10 +54,36 @@ function connectionMessage(error?: unknown) {
   return "PostgreSQL could not be reached or the AgriIsoko schema is not installed.";
 }
 
-export async function getDatabaseStatus(): Promise<{ status: "connected" | "unavailable"; message: string }> {
+export async function getDatabaseStatus(): Promise<{ status: "connected" | "unavailable"; message: string; version?: string }> {
   try {
-    await getPool().query("SELECT 1");
-    return { status: "connected", message: "" };
+    const result = await getPool().query<{ version: string; schema_ready: boolean; write_ready: boolean }>(`
+      SELECT current_setting('server_version') AS version,
+        (to_regclass('public.users') IS NOT NULL AND to_regclass('public.auth_sessions') IS NOT NULL AND
+         to_regclass('public.user_roles') IS NOT NULL AND to_regclass('public.harvest_reports') IS NOT NULL AND
+         to_regclass('public.inventory_balances') IS NOT NULL AND to_regclass('public.marketplace_listings') IS NOT NULL AND
+         to_regclass('public.marketplace_orders') IS NOT NULL AND to_regclass('public.audit_events') IS NOT NULL AND
+         to_regclass('public.crops') IS NOT NULL AND to_regclass('public.geographies') IS NOT NULL AND
+         to_regclass('public.organizations') IS NOT NULL AND to_regclass('public.seasons') IS NOT NULL AND
+         to_regclass('public.farms') IS NOT NULL AND to_regclass('public.roles') IS NOT NULL) AS schema_ready,
+        (has_table_privilege(current_user, to_regclass('public.users'), 'SELECT,INSERT,UPDATE') AND
+         has_table_privilege(current_user, to_regclass('public.auth_sessions'), 'SELECT,INSERT,DELETE') AND
+         has_table_privilege(current_user, to_regclass('public.user_roles'), 'SELECT,INSERT,DELETE') AND
+         has_table_privilege(current_user, to_regclass('public.roles'), 'SELECT') AND
+         has_table_privilege(current_user, to_regclass('public.audit_events'), 'INSERT') AND
+         has_table_privilege(current_user, to_regclass('public.organizations'), 'SELECT,INSERT,UPDATE,DELETE') AND
+         has_table_privilege(current_user, to_regclass('public.crops'), 'SELECT,INSERT,UPDATE,DELETE') AND
+         has_table_privilege(current_user, to_regclass('public.geographies'), 'SELECT,INSERT,UPDATE,DELETE') AND
+         has_table_privilege(current_user, to_regclass('public.seasons'), 'SELECT,INSERT,UPDATE,DELETE') AND
+         has_table_privilege(current_user, to_regclass('public.farms'), 'SELECT,INSERT,UPDATE,DELETE') AND
+         has_table_privilege(current_user, to_regclass('public.harvest_reports'), 'SELECT,INSERT,UPDATE,DELETE') AND
+         has_table_privilege(current_user, to_regclass('public.inventory_balances'), 'SELECT,INSERT,UPDATE,DELETE') AND
+         has_table_privilege(current_user, to_regclass('public.marketplace_listings'), 'SELECT,INSERT,UPDATE,DELETE') AND
+         has_table_privilege(current_user, to_regclass('public.marketplace_orders'), 'SELECT,INSERT,UPDATE,DELETE')) AS write_ready
+    `);
+    const row = result.rows[0];
+    if (!row.schema_ready) return { status: "unavailable", message: "Neon is reachable, but the AgriIsoko tables are incomplete. Apply the database migrations." };
+    if (!row.write_ready) return { status: "unavailable", message: "Neon is reachable, but its database role lacks the read/write permissions required by AgriIsoko." };
+    return { status: "connected", message: "Database schema and application read/write access are available.", version: row.version };
   } catch (error) {
     return { status: "unavailable", message: connectionMessage(error) };
   }

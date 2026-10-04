@@ -4,6 +4,7 @@ import { getSession, isAdmin } from "@/lib/auth";
 import DashboardNavigation from "@/app/dashboard/navigation";
 import { getDatabaseStatus } from "@/lib/agri-data";
 import BrandMark from "@/app/brand-mark";
+import DashboardBreadcrumbs from "@/app/dashboard/breadcrumbs";
 
 export default async function DashboardLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   let user;
@@ -28,10 +29,11 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
           ["/dashboard/analytics", "Analytics", "⌁"] as const,
         ] : []),
       ]} />
-      <div className="sidebar-bottom"><div className="help-card"><span className="help-spark">✳</span><strong>Built for the field</strong><p>Clear records. Better connections. Stronger food systems.</p></div><div className="profile"><div className="avatar">{user.name.slice(0,1).toUpperCase()}</div><div><strong>{user.name}</strong><small>{user.roles.join(" · ").replaceAll("_", " ")}</small></div></div></div>
+      <div className="sidebar-bottom"><div className="profile"><div className="avatar">{user.name.slice(0,1).toUpperCase()}</div><div><strong>{user.name}</strong><small>{user.roles.join(" · ").replaceAll("_", " ")}</small></div></div></div>
     </aside>
     <section className="main-content dashboard-content">
-      <header className="topbar"><div className="breadcrumbs">AgriIsoko <span>/</span> <strong>Workspace</strong></div><div className="top-actions"><span className={`connection ${database.status === "connected" ? "online" : "offline"}`} title={database.message}><i/>{database.status === "connected" ? "Neon connected" : "Database offline"}</span><form action="/api/auth/logout" method="post"><button className="signout-button">Sign out</button></form><div className="avatar user-avatar">{user.name.slice(0,1).toUpperCase()}</div></div></header>
+      <header className="topbar"><DashboardBreadcrumbs/><div className="top-actions"><span className={`connection ${database.status === "connected" ? "online" : "offline"}`} title={database.message}><i/>{database.status === "connected" ? "Database connected" : "Database needs attention"}</span><form action="/api/auth/logout" method="post"><button className="signout-button">Sign out</button></form><div className="avatar user-avatar">{user.name.slice(0,1).toUpperCase()}</div></div></header>
+      {database.status === "unavailable" && <div className="status-banner" role="status"><span className="status-symbol">!</span><div><strong>Database access needs attention</strong><p>{database.message}</p></div></div>}
       {children}
       <footer className="footer"><span>AgriIsoko <i>•</i> Rwanda Agricultural Marketplace &amp; Food Intelligence</span><span>Verified records only where stated</span></footer>
     </section>

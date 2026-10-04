@@ -71,8 +71,9 @@ function validateValues(entity: string, raw: unknown, fields: readonly AdminFiel
       if (field.name === "country_code" && !/^[A-Za-z]{2}$/.test(value)) throw new Error("Country code must be two letters, such as RW.");
       if (field.type === "date" && value && !/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error(`${field.label} must be a valid date.`);
       if (field.reference && value && !/^[0-9a-f-]{36}$/i.test(value)) throw new Error(`${field.label} selection is invalid.`);
-      if (field.options && value && !field.options.some((option) => option.value === value)) throw new Error(`${field.label} selection is invalid.`);
-      values[field.name] = value || null;
+      const matchedOption = field.options?.find((option) => option.value.toLocaleLowerCase() === value.toLocaleLowerCase() || option.label.toLocaleLowerCase() === value.toLocaleLowerCase());
+      if (field.options && value && !matchedOption) throw new Error(`${field.label} must be one of: ${field.options.map((option) => option.label).join(", ")}.`);
+      values[field.name] = (matchedOption?.value ?? value) || null;
     }
   }
   if (entity === "inventory_balances" && Number(values.available_kg) > Number(values.quantity_kg)) throw new Error("Available quantity cannot exceed total quantity.");

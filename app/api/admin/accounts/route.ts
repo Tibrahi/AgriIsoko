@@ -54,7 +54,7 @@ export async function PATCH(request: Request) {
       }
       await client.query(
         `INSERT INTO audit_events (actor_user_id, entity_type, entity_id, action, before_state, after_state)
-         VALUES ($1, 'user_account', $2, $3, jsonb_build_object('account_status', $4), jsonb_build_object('account_status', $5, 'role', $6, 'review_note', $7))`,
+         VALUES ($1, 'user_account', $2, $3, jsonb_build_object('account_status', $4::text), jsonb_build_object('account_status', $5::text, 'role', $6::text, 'review_note', $7::text))`,
         [admin.id, body.userId, body.status === "active" ? "account_approved" : "account_rejected", current.rows[0].account_status, body.status, body.status === "active" ? body.role : null, body.status === "rejected" ? String(body.reviewNote ?? "").trim() || null : null],
       );
       await client.query("COMMIT");
@@ -63,7 +63,10 @@ export async function PATCH(request: Request) {
       await client.query("ROLLBACK").catch(() => undefined);
       throw error;
     } finally { client.release(); }
-  } catch {
-    return Response.json({ error: "The account could not be updated. Check PostgreSQL and try again." }, { status: 503 });
+  } catch (error) {
+    const code = error && typeof error === "object" && "code" in error ? String(error.code) : "unknown";
+    console.error(`Account review failed (SQLSTATE ${code}).`);
+    const unavailable = code.startsWith("08") || ["ECONNREFUSED", "ECONNRESET", "ETIMEDOUT", "EAI_AGAIN"].includes(code);
+    return Response.json({ error: unavailable ? "Neon PostgreSQL is unavailable. Check the connection and try again." : "The account could not be updated because the database rejected the change." }, { status: unavailable ? 503 : 500 });
   }
 }

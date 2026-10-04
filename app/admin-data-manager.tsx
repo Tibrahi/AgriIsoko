@@ -11,13 +11,14 @@ const initialValue = (field: AdminField): string | boolean => {
   if (field.name === "unit") return "kg";
   if (field.name === "currency") return "RWF";
   if (field.name === "country_code") return "RW";
-  if (field.type === "select") return field.options?.[0]?.value ?? "";
+  if (field.name === "verification_status") return "submitted";
   return "";
 };
 const formatValue = (value: unknown) => value === null || value === undefined || value === "" ? "—" : String(value).replaceAll("_", " ");
 
-export default function AdminDataManager() {
-  const [entity, setEntity] = useState("crops");
+export default function AdminDataManager({ initialEntity = "crops" }: { initialEntity?: string }) {
+  const [entity, setEntity] = useState(initialEntity);
+  const [entityText, setEntityText] = useState(adminEntities[initialEntity]?.label ?? "Crops");
   const [records, setRecords] = useState<RecordRow[]>([]);
   const [options, setOptions] = useState<Record<string, Option[]>>({});
   const [form, setForm] = useState<Record<string, string | boolean>>({});
@@ -58,6 +59,10 @@ export default function AdminDataManager() {
     setEditing(row); setMessage(""); setError("");
     setForm(Object.fromEntries(fields.map((field) => {
       const value = row[field.name];
+      if (field.reference && value !== null && value !== undefined) {
+        const reference = options[field.reference]?.find((option) => option.id === String(value));
+        return [field.name, reference?.label ?? ""];
+      }
       return [field.name, field.type === "checkbox" ? Boolean(value) : value === null || value === undefined ? "" : String(value).slice(0, field.type === "date" ? 10 : undefined)];
     })));
     document.getElementById("admin-data-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -70,7 +75,14 @@ export default function AdminDataManager() {
   async function save(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); setSaving(true); setError(""); setMessage("");
     try {
-      const response = await fetch("/api/admin/data", { method: editing ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity, id: editing?.id, values: form }) });
+      const values: Record<string, string | boolean> = { ...form };
+      for (const field of fields) {
+        if (!field.reference || !String(form[field.name] ?? "").trim()) continue;
+        const match = options[field.reference]?.find((option) => option.label.toLocaleLowerCase() === String(form[field.name]).trim().toLocaleLowerCase());
+        if (!match) throw new Error(`${field.label} must match one of the listed records below the field.`);
+        values[field.name] = match.id;
+      }
+      const response = await fetch("/api/admin/data", { method: editing ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity, id: editing?.id, values }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Could not save record.");
       const success = editing ? "Record updated and added to the audit trail." : "Record created and added to the audit trail.";
@@ -91,8 +103,17 @@ export default function AdminDataManager() {
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not delete record."); }
   }
 
+  function changeEntityName(value: string) {
+    setEntityText(value);
+    const normalized = value.trim().toLocaleLowerCase();
+    const match = Object.entries(adminEntities).find(([key, item]) => key.toLocaleLowerCase() === normalized || item.label.toLocaleLowerCase() === normalized);
+    if (!match) return;
+    const next = match[0];
+    setLoading(true); setEntity(next); setForm(Object.fromEntries(adminEntities[next].fields.map((field) => [field.name, initialValue(field)]))); setEditing(null); setError(""); setMessage("");
+  }
+
   return <div className="admin-data-workspace">
-    <section className="panel glass-panel admin-data-toolbar"><div><p className="eyebrow">NEON POSTGRESQL</p><h2>Choose a data set</h2><p className="panel-copy">Changes are saved directly to the database and recorded in the audit trail.</p></div><label className="entity-picker">Data set<select value={entity} onChange={(event) => { const next = event.target.value; setLoading(true); setEntity(next); setForm(Object.fromEntries(adminEntities[next].fields.map((field) => [field.name, initialValue(field)]))); setEditing(null); setError(""); setMessage(""); }}><option value="crops">Crops</option><option value="geographies">Locations</option><option value="organizations">Organizations</option><option value="seasons">Seasons</option><option value="farms">Farms</option><option value="harvest_reports">Harvest reports</option><option value="inventory_balances">Availability records</option><option value="marketplace_listings">Marketplace listings</option><option value="marketplace_orders">Marketplace orders</option></select></label></section>
+    <section className="panel glass-panel admin-data-toolbar"><div><p className="eyebrow">DATABASE RECORDS</p><h2>Manage data</h2><p className="panel-copy">Changes are saved directly to the database and recorded in the audit trail.</p></div><label className="entity-picker">Data set<input type="text" value={entityText} onChange={(event) => changeEntityName(event.target.value)} placeholder="Type a data set name"/><small>Type crops, locations, organizations, seasons, farms, harvest reports, availability records, marketplace listings, or marketplace orders.</small></label></section>
     {(error || message) && <p className={`auth-message ${error ? "error" : "success"}`} role={error ? "alert" : "status"}>{error || message}</p>}
     <div className="admin-data-grid">
       <section className="panel glass-panel route-panel admin-records"><div className="panel-header"><div><p className="eyebrow">DATABASE RECORDS</p><h2>{config.label}</h2></div><button className="refresh-button" disabled={loading} onClick={() => void load(entity)}>↻ Refresh</button></div>
@@ -100,7 +121,7 @@ export default function AdminDataManager() {
         <p className="route-note">Showing the latest 100 records. Records referenced by other data cannot be deleted.</p>
       </section>
       <section className="panel glass-panel route-panel admin-data-form-panel" id="admin-data-form"><div className="panel-header"><div><p className="eyebrow">{editing ? "EDIT RECORD" : "NEW RECORD"}</p><h2>{editing ? "Update " : "Add "}{config.label.toLowerCase()}</h2></div></div>
-        {fields.some((field) => field.reference && !(options[field.reference]?.length)) && <p className="auth-message error setup-hint">This form needs linked records first. Create the required crops, locations, organizations, or seasons in the data set menu, then return here.</p>}
+        {fields.some((field) => field.reference && !(options[field.reference]?.length)) && <p className="auth-message error setup-hint">This form needs linked records first. Create the required crops, locations, organizations, or seasons using the text data set field above, then return here.</p>}
         <form className="admin-data-form" onSubmit={save}>{fields.map((field) => <Field key={field.name} field={field} value={form[field.name] ?? initialValue(field)} options={field.reference ? options[field.reference] ?? [] : []} onChange={(value) => setForm((current) => ({ ...current, [field.name]: value }))}/>)}
           <div className="admin-form-actions"><button className="primary-button" disabled={saving || fields.some((field) => field.required && field.reference && !(options[field.reference]?.length))}>{saving ? "Saving…" : editing ? "Save changes" : "Create record"}</button>{editing && <button type="button" className="refresh-button" onClick={resetForm}>Cancel edit</button>}</div>
         </form><p className="route-note">Administrative changes are attributed to your account. Verified records include your verification identity and timestamp.</p>
@@ -111,8 +132,9 @@ export default function AdminDataManager() {
 
 function Field({ field, value, options, onChange }: { field: AdminField; value: string | boolean; options: Option[]; onChange: (value: string | boolean) => void }) {
   if (field.type === "checkbox") return <label className="admin-check-field"><input type="checkbox" checked={Boolean(value)} onChange={(event) => onChange(event.target.checked)}/>{field.label}</label>;
-  const common = { required: field.required, value: String(value), onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => onChange(event.target.value) };
-  return <label className="admin-data-field">{field.label}{field.type === "select" ? <select {...common}><option value="">{field.required ? "Choose…" : "Not linked"}</option>{field.reference ? options.map((option) => <option key={option.id} value={option.id}>{option.label}</option>) : field.options?.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select> : <input {...common} type={field.type === "number" ? "number" : field.type} min={field.type === "number" ? "0" : undefined} step={field.type === "number" ? "any" : undefined}/>}</label>;
+  const common = { required: field.required, value: String(value), onChange: (event: React.ChangeEvent<HTMLInputElement>) => onChange(event.target.value), placeholder: field.reference ? `Type ${field.label.toLocaleLowerCase()}` : field.options ? `Type a ${field.label.toLocaleLowerCase()}` : undefined };
+  const matches = options.filter((option) => !String(value).trim() || option.label.toLocaleLowerCase().includes(String(value).trim().toLocaleLowerCase())).slice(0,8);
+  return <label className="admin-data-field">{field.label}<input {...common} type={field.type === "number" ? "number" : field.type === "reference" ? "text" : field.type} min={field.type === "number" ? "0" : undefined} step={field.type === "number" ? "any" : undefined}/>{field.reference&&<small className="field-hint">{options.length ? String(value).trim() ? `Matching records: ${matches.map((option)=>option.label).join("; ") || "no match"}${matches.length===8?"; type more to narrow results":""}` : `${options.length} linked records available. Type part of a name to find a match.` : "No linked records yet. Add them first using the data set field."}</small>}{field.options&&<small className="field-hint">Type one of: {field.options.map((option)=>option.label).join(", ")}</small>}</label>;
 }
 
 function recordTitle(row: RecordRow, entity: string) {

@@ -11,7 +11,8 @@ export async function POST(request: Request) {
   const name = typeof body.name === "string" ? body.name.trim() : "";
   const email = typeof body.email === "string" ? normalizeEmail(body.email) : "";
   const password = typeof body.password === "string" ? body.password : "";
-  const role = body.role === "buyer" ? "buyer" : body.role === "farmer" ? "farmer" : "";
+  const requestedRole = typeof body.role === "string" ? body.role.trim().toLocaleLowerCase() : "";
+  const role = requestedRole === "buyer" ? "buyer" : requestedRole === "farmer" ? "farmer" : "";
   if (name.length < 2 || name.length > 100 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254 || password.length < 12 || password.length > 256 || !role) {
     return Response.json({ error: "Use a valid name and email, choose farmer or buyer, and set a password of at least 12 characters." }, { status: 400 });
   }

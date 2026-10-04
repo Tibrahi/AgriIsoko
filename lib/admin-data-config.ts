@@ -1,7 +1,7 @@
 export type AdminField = {
   name: string;
   label: string;
-  type: "text" | "number" | "date" | "checkbox" | "select";
+  type: "text" | "number" | "date" | "checkbox" | "reference";
   required?: boolean;
   reference?: string;
   options?: readonly { value: string; label: string }[];
@@ -34,7 +34,7 @@ export const adminEntities: Record<string, AdminEntity> = {
   ] },
   organizations: { label: "Organizations", table: "organizations", fields: [
     { name: "name", label: "Organization name", type: "text", required: true },
-    { name: "organization_type", label: "Type", type: "select", required: true, options: ["farmer", "cooperative", "buyer", "warehouse", "market", "government", "other"].map((value) => ({ value, label: value.replaceAll("_", " ") })) },
+    { name: "organization_type", label: "Type", type: "text", required: true, options: ["farmer", "cooperative", "buyer", "warehouse", "market", "government", "other"].map((value) => ({ value, label: value.replaceAll("_", " ") })) },
   ] },
   seasons: { label: "Seasons", table: "seasons", fields: [
     { name: "name", label: "Season name", type: "text", required: true },
@@ -42,56 +42,56 @@ export const adminEntities: Record<string, AdminEntity> = {
     { name: "ends_on", label: "Ends on", type: "date", required: true },
   ] },
   farms: { label: "Farms", table: "farms", verification: true, fields: [
-    { name: "organization_id", label: "Organization", type: "select", required: true, reference: "organizations" },
-    { name: "geography_id", label: "Location", type: "select", required: true, reference: "geographies" },
+    { name: "organization_id", label: "Organization", type: "reference", required: true, reference: "organizations" },
+    { name: "geography_id", label: "Location", type: "reference", required: true, reference: "geographies" },
     { name: "cultivated_area_ha", label: "Cultivated area (ha)", type: "number" },
     { name: "location_point", label: "Map point or coordinates (optional)", type: "text" },
-    { name: "verification_status", label: "Review status", type: "select", options: verificationOptions },
+    { name: "verification_status", label: "Review status", type: "text", options: verificationOptions },
   ] },
   harvest_reports: { label: "Harvest reports", table: "harvest_reports", verification: true, fields: [
-    { name: "farm_id", label: "Farm (optional)", type: "select", reference: "farms" },
-    { name: "organization_id", label: "Organization", type: "select", required: true, reference: "organizations" },
-    { name: "crop_id", label: "Crop", type: "select", required: true, reference: "crops" },
-    { name: "season_id", label: "Season", type: "select", reference: "seasons" },
-    { name: "geography_id", label: "Location", type: "select", required: true, reference: "geographies" },
-    { name: "report_type", label: "Report type", type: "select", required: true, options: ["intention", "progress", "actual"].map((value) => ({ value, label: value })) },
+    { name: "farm_id", label: "Farm (optional)", type: "reference", reference: "farms" },
+    { name: "organization_id", label: "Organization", type: "reference", required: true, reference: "organizations" },
+    { name: "crop_id", label: "Crop", type: "reference", required: true, reference: "crops" },
+    { name: "season_id", label: "Season", type: "reference", reference: "seasons" },
+    { name: "geography_id", label: "Location", type: "reference", required: true, reference: "geographies" },
+    { name: "report_type", label: "Report type", type: "text", required: true, options: ["intention", "progress", "actual"].map((value) => ({ value, label: value })) },
     { name: "quantity_kg", label: "Quantity (kg)", type: "number", required: true },
     { name: "report_date", label: "Report date", type: "date", required: true },
     { name: "expected_harvest_on", label: "Expected harvest (optional)", type: "date" },
     { name: "source", label: "Data source", type: "text", required: true },
     { name: "source_reference", label: "Source reference", type: "text" },
     { name: "notes", label: "Notes", type: "text" },
-    { name: "verification_status", label: "Review status", type: "select", options: verificationOptions },
+    { name: "verification_status", label: "Review status", type: "text", options: verificationOptions },
   ] },
   inventory_balances: { label: "Availability records", table: "inventory_balances", verification: true, fields: [
-    { name: "organization_id", label: "Organization", type: "select", required: true, reference: "organizations" },
-    { name: "crop_id", label: "Crop", type: "select", required: true, reference: "crops" },
-    { name: "geography_id", label: "Location", type: "select", required: true, reference: "geographies" },
+    { name: "organization_id", label: "Organization", type: "reference", required: true, reference: "organizations" },
+    { name: "crop_id", label: "Crop", type: "reference", required: true, reference: "crops" },
+    { name: "geography_id", label: "Location", type: "reference", required: true, reference: "geographies" },
     { name: "quantity_kg", label: "Total quantity (kg)", type: "number", required: true },
     { name: "available_kg", label: "Available quantity (kg)", type: "number", required: true },
     { name: "as_of", label: "Recorded at", type: "date", required: true },
     { name: "source", label: "Data source", type: "text", required: true },
-    { name: "verification_status", label: "Review status", type: "select", options: verificationOptions },
+    { name: "verification_status", label: "Review status", type: "text", options: verificationOptions },
   ] },
   marketplace_listings: { label: "Marketplace listings", table: "marketplace_listings", verification: true, fields: [
-    { name: "seller_organization_id", label: "Seller organization", type: "select", required: true, reference: "organizations" },
-    { name: "crop_id", label: "Crop", type: "select", required: true, reference: "crops" },
-    { name: "geography_id", label: "Location", type: "select", required: true, reference: "geographies" },
+    { name: "seller_organization_id", label: "Seller organization", type: "reference", required: true, reference: "organizations" },
+    { name: "crop_id", label: "Crop", type: "reference", required: true, reference: "crops" },
+    { name: "geography_id", label: "Location", type: "reference", required: true, reference: "geographies" },
     { name: "available_quantity", label: "Quantity", type: "number", required: true },
     { name: "unit", label: "Unit", type: "text", required: true },
     { name: "price_per_unit", label: "Price per unit (optional)", type: "number" },
     { name: "currency", label: "Currency", type: "text", required: true },
     { name: "available_from", label: "Available from", type: "date" },
-    { name: "status", label: "Listing status", type: "select", options: ["open", "reserved", "fulfilled", "withdrawn"].map((value) => ({ value, label: value.replaceAll("_", " ") })) },
-    { name: "verification_status", label: "Review status", type: "select", options: verificationOptions },
+    { name: "status", label: "Listing status", type: "text", options: ["open", "reserved", "fulfilled", "withdrawn"].map((value) => ({ value, label: value.replaceAll("_", " ") })) },
+    { name: "verification_status", label: "Review status", type: "text", options: verificationOptions },
     { name: "source", label: "Data source", type: "text", required: true },
   ] },
   marketplace_orders: { label: "Marketplace orders", table: "marketplace_orders", fields: [
-    { name: "listing_id", label: "Listing", type: "select", required: true, reference: "marketplace_listings" },
-    { name: "buyer_organization_id", label: "Buyer organization", type: "select", required: true, reference: "organizations" },
+    { name: "listing_id", label: "Listing", type: "reference", required: true, reference: "marketplace_listings" },
+    { name: "buyer_organization_id", label: "Buyer organization", type: "reference", required: true, reference: "organizations" },
     { name: "quantity", label: "Quantity", type: "number", required: true },
     { name: "agreed_price_per_unit", label: "Agreed price (optional)", type: "number" },
     { name: "currency", label: "Currency", type: "text", required: true },
-    { name: "status", label: "Order status", type: "select", required: true, options: ["requested", "accepted", "rejected", "in_delivery", "completed", "cancelled"].map((value) => ({ value, label: value.replaceAll("_", " ") })) },
+    { name: "status", label: "Order status", type: "text", required: true, options: ["requested", "accepted", "rejected", "in_delivery", "completed", "cancelled"].map((value) => ({ value, label: value.replaceAll("_", " ") })) },
   ] },
 };
