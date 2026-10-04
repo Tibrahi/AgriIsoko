@@ -44,11 +44,12 @@ export async function PATCH(request: Request) {
       await client.query("UPDATE users SET account_status = $1 WHERE id = $2", [body.status, body.userId]);
       if (body.status === "active") {
         await client.query("DELETE FROM user_roles WHERE user_id = $1", [body.userId]);
-        await client.query(
+        const assignment = await client.query(
           `INSERT INTO user_roles (user_id, role_id, organization_id, assigned_by)
            SELECT $1, id, $2, $3 FROM roles WHERE name = $4`,
           [body.userId, current.rows[0].organization_id, admin.id, body.role],
         );
+        if (assignment.rowCount !== 1) throw new Error("The selected role is not configured.");
       }
       await client.query(
         `INSERT INTO audit_events (actor_user_id, entity_type, entity_id, action, before_state, after_state)

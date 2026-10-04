@@ -34,7 +34,8 @@ export async function POST(request: Request) {
       await client.query("ROLLBACK");
       return Response.json({ error: "An account with those details could not be created. If you already registered, sign in or contact your administrator." }, { status: 409 });
     }
-    await client.query("INSERT INTO user_roles (user_id, role_id, organization_id) SELECT $1, id, $2 FROM roles WHERE name = $3", [inserted.rows[0].id, organization.rows[0].id, role]);
+    const assignment = await client.query("INSERT INTO user_roles (user_id, role_id, organization_id) SELECT $1, id, $2 FROM roles WHERE name = $3", [inserted.rows[0].id, organization.rows[0].id, role]);
+    if (assignment.rowCount !== 1) throw new Error("The requested account role is not configured.");
     await client.query("COMMIT");
     await createSession(inserted.rows[0].id);
     return Response.json({ ok: true, status: "pending" }, { status: 201 });
