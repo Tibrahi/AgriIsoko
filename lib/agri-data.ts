@@ -17,7 +17,7 @@ declare global {
   var agriIsokoPool: Pool | undefined;
 }
 
-function getPool() {
+export function getPool() {
   if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is not configured.");
   global.agriIsokoPool ??= new Pool({ connectionString: process.env.DATABASE_URL, max: 5, connectionTimeoutMillis: 2500, idleTimeoutMillis: 10000 });
   return global.agriIsokoPool;

@@ -1,4 +1,8 @@
 import { getDashboardData } from "@/lib/agri-data";
+import { getSession, isAdmin } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import AdminQueue from "@/app/admin-queue";
+import Link from "next/link";
 
 const navItems = ["Overview", "Marketplace", "Harvest reports", "Availability", "Analytics"];
 
@@ -7,6 +11,12 @@ function formatNumber(value: number) {
 }
 
 export default async function Home() {
+  let user;
+  try { user = await getSession(); } catch { redirect("/login"); }
+  if (!user) redirect("/login");
+  if (user.status === "pending") return <AccessPage title="Your account is waiting for approval" copy="An AgriIsoko administrator must approve your account before you can enter the workspace. You can sign out and return later." user={user.name} />;
+  if (user.status === "suspended") return <AccessPage title="This account is suspended" copy="Workspace access has been paused. Contact your AgriIsoko administrator if you think this is a mistake." user={user.name} />;
+  if (!user.roles.includes("national_admin") && !user.roles.includes("analyst")) return <AccessPage title="Your workspace is being prepared" copy={`You are signed in as ${user.roles.map((role) => role.replaceAll("_", " ")).join(", ") || "a user"}. This account is active, but its role-specific tools are not enabled in this version yet.`} user={user.name} />;
   const data = await getDashboardData();
 
   return (
@@ -34,11 +44,11 @@ export default async function Home() {
       <section className="main-content" id="overview">
         <header className="topbar">
           <div className="breadcrumbs">Workspace <span>/</span> <strong>Overview</strong></div>
-          <div className="top-actions"><span className={`connection ${data.status === "connected" ? "online" : "offline"}`}><i />{data.status === "connected" ? "Database connected" : "Database unavailable"}</span><button className="icon-button" aria-label="Notifications">♧<b /></button><div className="avatar user-avatar">AI</div></div>
+          <div className="top-actions"><span className={`connection ${data.status === "connected" ? "online" : "offline"}`}><i />{data.status === "connected" ? "Database connected" : "Database unavailable"}</span><SignOutButton /><div className="avatar user-avatar">{user.name.slice(0, 1).toUpperCase()}</div></div>
         </header>
 
         <div className="page-heading">
-          <div><p className="eyebrow">RWANDA • AGRICULTURE INTELLIGENCE</p><h1>Good morning<span>,</span> let’s grow.</h1><p className="subtitle">A clear view of the harvest, supply, and trade records in your workspace.</p></div>
+          <div><p className="eyebrow">RWANDA • AGRICULTURE INTELLIGENCE</p><h1>Good morning<span>,</span> {user.name.split(" ")[0]}.</h1><p className="subtitle">A clear view of the harvest, supply, and trade records in your workspace.</p></div>
           <a className="primary-button" href="#harvest-reports"><span>＋</span> Submit a report</a>
         </div>
 
@@ -79,6 +89,7 @@ export default async function Home() {
             <div className="principle-row"><span className="principle-icon">⌖</span><div><strong>Coverage is stated</strong><small>Records are not presented as national totals.</small></div></div>
           </div>
         </section>
+        {isAdmin(user) && <div className="admin-queue-wrap"><AdminQueue /></div>}
         <footer className="footer" id="setup"><span>AgriIsoko <i>•</i> Rwanda Agricultural Marketplace & Food Intelligence</span><span>All indicators come from configured PostgreSQL records</span></footer>
       </section>
     </main>
@@ -91,4 +102,12 @@ function Metric({ label, value, note, icon, tone }: { label: string; value: stri
 
 function EmptyState({ title, description }: { title: string; description: string }) {
   return <div className="empty-state"><span className="empty-icon">⌑</span><strong>{title}</strong><p>{description}</p></div>;
+}
+
+function SignOutButton() {
+  return <form action="/api/auth/logout" method="post"><button className="signout-button">Sign out</button></form>;
+}
+
+function AccessPage({ title, copy, user }: { title: string; copy: string; user: string }) {
+  return <main className="auth-page"><section className="auth-card glass-panel access-card"><Link className="brand auth-brand" href="/"><span className="brand-mark">A<span>+</span></span><span><strong>AgriIsoko</strong><small>RWANDA FOOD INTELLIGENCE</small></span></Link><div className="access-mark">⌑</div><p className="eyebrow">ACCOUNT ACCESS</p><h1>{title}</h1><p className="auth-intro">{copy}</p><div className="signed-user"><div className="avatar">{user.slice(0, 1).toUpperCase()}</div><span><strong>{user}</strong><small>Signed in</small></span><SignOutButton /></div></section><p className="auth-foot">AgriIsoko <i>•</i> Rwanda agricultural marketplace &amp; food intelligence</p></main>;
 }
