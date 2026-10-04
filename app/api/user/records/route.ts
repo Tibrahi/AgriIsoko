@@ -16,11 +16,16 @@ async function activeProducer() {
   return user;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const user = await activeProducer();
   if (!user) return Response.json({ error: "An approved farmer or buyer account is required." }, { status: 403 });
   try {
     const pool = getPool();
+    const params = new URL(request.url).searchParams;
+    const selectedKind = params.get("kind") ?? "";
+    const requestedPage = Math.max(1, Number.parseInt(params.get("page") ?? "1", 10) || 1);
+    const pageSize = 25;
+    const pagination: Record<string, { page: number; pages: number; total: number }> = {};
     const queries: Record<string, Promise<{ rows: unknown[] }>> = {
       farms: user.roles.includes("farmer") ? pool.query("SELECT f.id,f.geography_id,g.district_name AS district,f.cultivated_area_ha::text AS area,f.verification_status AS status,f.created_at::date::text AS date FROM farms f JOIN geographies g ON g.id=f.geography_id WHERE f.submitted_by=$1 ORDER BY f.created_at DESC LIMIT 100", [user.id]) : Promise.resolve({ rows: [] }),
       harvests: user.roles.includes("farmer") ? pool.query("SELECT h.id,h.farm_id,h.crop_id,h.season_id,h.geography_id,c.name AS crop,g.district_name AS district,h.quantity_kg::text AS quantity,h.report_type AS type,h.report_date::text AS date,h.expected_harvest_on::text AS expected_harvest_on,h.verification_status AS status,h.notes FROM harvest_reports h JOIN crops c ON c.id=h.crop_id JOIN geographies g ON g.id=h.geography_id WHERE h.submitted_by=$1 ORDER BY h.created_at DESC LIMIT 100", [user.id]) : Promise.resolve({ rows: [] }),
@@ -34,7 +39,25 @@ export async function GET() {
       listingsOptions: user.roles.includes("buyer") ? pool.query("SELECT l.id,c.name || ' · ' || o.name || ' · ' || l.available_quantity::text || ' ' || l.unit AS label FROM marketplace_listings l JOIN crops c ON c.id=l.crop_id JOIN organizations o ON o.id=l.seller_organization_id WHERE l.seller_organization_id<>$1 AND l.status='open' AND l.verification_status='verified' AND l.available_quantity>0 AND (l.available_from IS NULL OR l.available_from<=CURRENT_DATE) ORDER BY l.created_at DESC LIMIT 100",[user.organizationId]) : Promise.resolve({ rows: [] }),
     };
     const entries = await Promise.all(Object.entries(queries).map(async ([key, promise]) => [key, (await promise).rows] as const));
-    return Response.json(Object.fromEntries(entries), { headers: { "Cache-Control": "no-store" } });
+    const result: Record<string, unknown> = Object.fromEntries(entries);
+    const pagedKinds: Record<string, { key: string; countSql: string; querySql: string; values: unknown[] }> = {
+      farms: { key: "farms", countSql: "SELECT count(*)::text AS total FROM farms WHERE submitted_by=$1", querySql: "SELECT f.id,f.geography_id,g.district_name AS district,f.cultivated_area_ha::text AS area,f.verification_status AS status,f.created_at::date::text AS date FROM farms f JOIN geographies g ON g.id=f.geography_id WHERE f.submitted_by=$1 ORDER BY f.created_at DESC LIMIT $2 OFFSET $3", values: [user.id] },
+      harvest_reports: { key: "harvests", countSql: "SELECT count(*)::text AS total FROM harvest_reports WHERE submitted_by=$1", querySql: "SELECT h.id,h.farm_id,h.crop_id,h.season_id,h.geography_id,c.name AS crop,g.district_name AS district,h.quantity_kg::text AS quantity,h.report_type AS type,h.report_date::text AS date,h.expected_harvest_on::text AS expected_harvest_on,h.verification_status AS status,h.notes FROM harvest_reports h JOIN crops c ON c.id=h.crop_id JOIN geographies g ON g.id=h.geography_id WHERE h.submitted_by=$1 ORDER BY h.created_at DESC LIMIT $2 OFFSET $3", values: [user.id] },
+      inventory_balances: { key: "inventory", countSql: "SELECT count(*)::text AS total FROM inventory_balances WHERE submitted_by=$1", querySql: "SELECT i.id,i.crop_id,i.geography_id,c.name AS crop,g.district_name AS district,i.quantity_kg::text AS quantity,i.available_kg::text AS available,i.as_of::date::text AS date,i.verification_status AS status FROM inventory_balances i JOIN crops c ON c.id=i.crop_id JOIN geographies g ON g.id=i.geography_id WHERE i.submitted_by=$1 ORDER BY i.created_at DESC LIMIT $2 OFFSET $3", values: [user.id] },
+      marketplace_listings: { key: "listings", countSql: "SELECT count(*)::text AS total FROM marketplace_listings WHERE created_by=$1", querySql: "SELECT l.id,l.crop_id,l.geography_id,c.name AS crop,g.district_name AS district,l.available_quantity::text AS quantity,l.unit,l.price_per_unit::text AS price,l.currency,l.available_from::text AS available_from,l.status AS listing_status,l.verification_status AS status FROM marketplace_listings l JOIN crops c ON c.id=l.crop_id JOIN geographies g ON g.id=l.geography_id WHERE l.created_by=$1 ORDER BY l.created_at DESC LIMIT $2 OFFSET $3", values: [user.id] },
+      marketplace_orders: { key: "orders", countSql: "SELECT count(*)::text AS total FROM marketplace_orders mo JOIN marketplace_listings l ON l.id=mo.listing_id WHERE mo.created_by=$1 OR l.seller_organization_id=$2", querySql: "SELECT mo.id,mo.listing_id,mo.agreed_price_per_unit::text AS agreed_price_per_unit,c.name AS crop,mo.quantity::text AS quantity,mo.status,CASE WHEN mo.created_by=$1 THEN 'buyer' ELSE 'seller' END AS view_as,mo.created_at::date::text AS date,o.name AS other_party FROM marketplace_orders mo JOIN marketplace_listings l ON l.id=mo.listing_id JOIN crops c ON c.id=l.crop_id JOIN organizations buyer ON buyer.id=mo.buyer_organization_id JOIN organizations seller ON seller.id=l.seller_organization_id JOIN organizations o ON o.id=CASE WHEN mo.created_by=$1 THEN seller.id ELSE buyer.id END WHERE mo.created_by=$1 OR l.seller_organization_id=$2 ORDER BY mo.created_at DESC LIMIT $3 OFFSET $4", values: [user.id,user.organizationId] },
+    };
+    const descriptor = pagedKinds[selectedKind];
+    if (descriptor) {
+      const count = await pool.query<{ total: string }>(descriptor.countSql, descriptor.values);
+      const total = Number(count.rows[0]?.total ?? 0);
+      const pages = Math.max(1, Math.ceil(total / pageSize));
+      const page = Math.min(requestedPage, pages);
+      const resultPage = await pool.query(descriptor.querySql, [...descriptor.values, pageSize, (page - 1) * pageSize]);
+      result[descriptor.key] = resultPage.rows;
+      pagination[selectedKind] = { page, pages, total };
+    }
+    return Response.json({ ...result, pagination }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return Response.json({ error: databaseUnavailable(error) }, { status: 503 });
   }

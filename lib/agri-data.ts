@@ -16,6 +16,9 @@ export type DashboardData = {
 export type MarketplaceData = {
   status: "connected" | "unavailable";
   message: string;
+  page: number;
+  pages: number;
+  total: number;
   listings: Array<{ id: string; crop: string; seller: string; district: string; quantity: number; unit: string; price: number | null; currency: string; availableFrom: string | null }>;
 };
 
@@ -172,9 +175,18 @@ export async function getDashboardData(): Promise<DashboardData> {
   }
 }
 
-export async function getMarketplaceData(): Promise<MarketplaceData> {
+export async function getMarketplaceData(requestedPage = 1): Promise<MarketplaceData> {
   try {
-    const result = await getPool().query<{
+    const pool = getPool();
+    const pageSize = 24;
+    const count = await pool.query<{ total: string }>(`SELECT count(*)::text AS total FROM marketplace_listings l
+      WHERE l.status = 'open' AND l.verification_status = 'verified'
+        AND l.available_quantity > coalesce((SELECT sum(mo.quantity) FROM marketplace_orders mo WHERE mo.listing_id=l.id AND mo.status IN ('requested','accepted','in_delivery')),0)
+        AND (l.available_from IS NULL OR l.available_from <= CURRENT_DATE)`);
+    const total = Number(count.rows[0]?.total ?? 0);
+    const pages = Math.max(1, Math.ceil(total / pageSize));
+    const page = Math.min(Math.max(1, requestedPage), pages);
+    const result = await pool.query<{
       id: string; crop: string; seller: string; district: string; quantity: string;
       unit: string; price: string | null; currency: string; available_from: string | null;
     }>(`
@@ -189,14 +201,14 @@ export async function getMarketplaceData(): Promise<MarketplaceData> {
         AND l.available_quantity > coalesce((SELECT sum(mo.quantity) FROM marketplace_orders mo WHERE mo.listing_id=l.id AND mo.status IN ('requested','accepted','in_delivery')),0)
         AND (l.available_from IS NULL OR l.available_from <= CURRENT_DATE)
       ORDER BY l.created_at DESC
-      LIMIT 40
-    `);
-    return { status: "connected", message: "", listings: result.rows.map((row) => ({
+      LIMIT $1 OFFSET $2
+    `, [pageSize, (page - 1) * pageSize]);
+    return { status: "connected", message: "", page, pages, total, listings: result.rows.map((row) => ({
       id: row.id, crop: row.crop, seller: row.seller, district: row.district,
       quantity: Number(row.quantity), unit: row.unit, price: row.price === null ? null : Number(row.price),
       currency: row.currency, availableFrom: row.available_from,
     })) };
   } catch (error) {
-    return { status: "unavailable", message: connectionMessage(error), listings: [] };
+    return { status: "unavailable", message: connectionMessage(error), page: Math.max(1, requestedPage), pages: 1, total: 0, listings: [] };
   }
 }

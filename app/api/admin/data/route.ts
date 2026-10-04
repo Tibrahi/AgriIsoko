@@ -27,18 +27,22 @@ export async function GET(request: Request) {
   const admin = await requireAdmin();
   if (!admin) return Response.json({ error: "Administrator access is required." }, { status: 403 });
   const entity = new URL(request.url).searchParams.get("entity") ?? "crops";
+  const requestedPage = Math.max(1, Number.parseInt(new URL(request.url).searchParams.get("page") ?? "1", 10) || 1);
   const config = adminEntities[entity];
   if (!config) return Response.json({ error: "Choose a supported data type." }, { status: 400 });
   try {
     const pool = getPool();
+    const pageSize = 25;
+    const count = await pool.query<{ total: string }>(`SELECT count(*)::text AS total FROM ${config.table}`);
+    const total = Number(count.rows[0].total);
+    const pages = Math.max(1, Math.ceil(total / pageSize));
+    const page = Math.min(requestedPage, pages);
+    const order = ["crops", "geographies", "seasons"].includes(entity) ? "id ASC" : "created_at DESC, id DESC";
     const [records, options] = await Promise.all([
-      pool.query(`SELECT * FROM ${config.table} ORDER BY created_at DESC LIMIT 100`).catch(async (error) => {
-        if (entity === "crops" || entity === "geographies" || entity === "seasons") return pool.query(`SELECT * FROM ${config.table} ORDER BY id LIMIT 100`);
-        throw error;
-      }),
+      pool.query(`SELECT * FROM ${config.table} ORDER BY ${order} LIMIT $1 OFFSET $2`, [pageSize, (page - 1) * pageSize]),
       Promise.all([...new Set(config.fields.map((field) => field.reference).filter((v): v is string => Boolean(v)))].map(async (key) => [key, await references[key](pool)] as const)),
     ]);
-    return Response.json({ records: records.rows, options: Object.fromEntries(options) }, { headers: { "Cache-Control": "no-store" } });
+    return Response.json({ records: records.rows, options: Object.fromEntries(options), page, pages, total, pageSize }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return Response.json({ error: connectionMessage(error) }, { status: 503 });
   }

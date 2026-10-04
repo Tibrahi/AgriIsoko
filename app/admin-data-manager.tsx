@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { adminEntities, type AdminField } from "@/lib/admin-data-config";
+import PageControls from "@/app/page-controls";
 
 type RecordRow = Record<string, unknown> & { id: string };
 type Option = { id: string; label: string };
@@ -26,6 +27,9 @@ export default function AdminDataManager({ initialEntity = "crops" }: { initialE
   const [editing, setEditing] = useState<RecordRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [dataReady, setDataReady] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -33,29 +37,20 @@ export default function AdminDataManager({ initialEntity = "crops" }: { initialE
   const fields = config.fields;
   const columns = useMemo(() => fields.filter((field) => !["notes", "source_reference", "farm_id", "season_id", "cultivated_area_ha"].includes(field.name)).slice(0, 7), [fields]);
 
-  const load = useCallback(async (kind: string) => {
+  const load = useCallback(async (kind: string, requestedPage = page) => {
     setLoading(true); setDataReady(false); setError("");
     try {
-      const response = await fetch(`/api/admin/data?entity=${encodeURIComponent(kind)}`, { cache: "no-store" });
+      const response = await fetch(`/api/admin/data?entity=${encodeURIComponent(kind)}&page=${requestedPage}`, { cache: "no-store" });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Could not load records.");
-      setRecords(data.records); setOptions(data.options); setDataReady(true);
+      setRecords(data.records); setOptions(data.options); setPages(data.pages); setTotal(data.total); setPage(data.page); setDataReady(true);
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not load records."); }
     finally { setLoading(false); }
-  }, []);
+  }, [page]);
 
   useEffect(() => {
-    let active = true;
-    fetch(`/api/admin/data?entity=${encodeURIComponent(entity)}`, { cache: "no-store" })
-      .then(async (response) => ({ response, data: await response.json() }))
-      .then(({ response, data }) => {
-        if (!active) return;
-        if (!response.ok) throw new Error(data.error ?? "Could not load records.");
-        setRecords(data.records); setOptions(data.options); setDataReady(true); setLoading(false);
-      })
-      .catch((cause: unknown) => { if (active) { setError(cause instanceof Error ? cause.message : "Could not load records."); setLoading(false); } });
-    return () => { active = false; };
-  }, [entity]);
+    void load(entity, page);
+  }, [entity, page, load]);
 
   function startEdit(row: RecordRow) {
     setEditing(row); setMessage(""); setError("");
@@ -111,7 +106,7 @@ export default function AdminDataManager({ initialEntity = "crops" }: { initialE
     const match = Object.entries(adminEntities).find(([key, item]) => key.toLocaleLowerCase() === normalized || item.label.toLocaleLowerCase() === normalized);
     if (!match) return;
     const next = match[0];
-    setLoading(true); setEntity(next); setForm(Object.fromEntries(adminEntities[next].fields.map((field) => [field.name, initialValue(field)]))); setEditing(null); setError(""); setMessage("");
+    setLoading(true); setEntity(next); setPage(1); setForm(Object.fromEntries(adminEntities[next].fields.map((field) => [field.name, initialValue(field)]))); setEditing(null); setError(""); setMessage("");
   }
 
   return <div className="admin-data-workspace">
@@ -120,7 +115,7 @@ export default function AdminDataManager({ initialEntity = "crops" }: { initialE
     <div className="admin-data-grid">
       <section className="panel glass-panel route-panel admin-records"><div className="panel-header"><div><p className="eyebrow">DATABASE RECORDS</p><h2>{config.label}</h2></div><button className="refresh-button" disabled={loading} onClick={() => void load(entity)}>↻ Refresh</button></div>
         {loading ? <div className="admin-empty">Loading records from Neon…</div> : records.length === 0 ? <div className="empty-state"><span className="empty-icon">⌑</span><strong>No {config.label.toLowerCase()} yet</strong><p>Create the first record using the form.</p></div> : <div className="admin-record-list">{records.map((row) => <article className="admin-record-row" key={row.id}><div className="admin-record-main"><strong>{recordTitle(row, entity)}</strong><small>{columns.map((field) => `${field.label}: ${formatValue(row[field.name])}`).join(" · ")}</small></div><div className="admin-record-actions"><button className="refresh-button" onClick={() => startEdit(row)}>Edit</button><button className="reject-button" onClick={() => void remove(row)}>Delete</button></div></article>)}</div>}
-        <p className="route-note">Showing the latest 100 records. Records referenced by other data cannot be deleted.</p>
+        {!loading&&<PageControls page={page} pages={pages} onPageChange={setPage}/>}<p className="route-note">{total.toLocaleString()} database records. Records referenced by other data cannot be deleted.</p>
       </section>
       <section className="panel glass-panel route-panel admin-data-form-panel" id="admin-data-form"><div className="panel-header"><div><p className="eyebrow">{editing ? "EDIT RECORD" : "NEW RECORD"}</p><h2>{editing ? "Update " : "Add "}{config.label.toLowerCase()}</h2></div></div>
         {fields.some((field) => field.reference && !(options[field.reference]?.length)) && <p className="auth-message error setup-hint">This form needs linked records first. Create the required crops, locations, organizations, or seasons using the text data set field above, then return here.</p>}

@@ -20,13 +20,13 @@ export default async function DashboardLayout({ children }: Readonly<{ children:
       <Link className="brand" href="/dashboard"><BrandMark/><span><strong>AgriIsoko</strong><small>RWANDA FOOD INTELLIGENCE</small></span></Link>
       <div className="workspace-label">WORKSPACE</div>
       <DashboardNavigation admin={isAdmin(user)} items={[
-        ["/dashboard", "Overview", "⌂"],
-        ...(canSubmitOwnRecords ? [["/dashboard/my-records", "My records", "▣"] as const] : []),
-        ["/dashboard/marketplace", "Marketplace", "◇"],
+        ["/dashboard", "Overview", "overview"],
+        ...(canSubmitOwnRecords ? [["/dashboard/my-records", "My records", "records"] as const] : []),
+        ["/dashboard/marketplace", "Marketplace", "marketplace"],
         ...(canSeeAnalytics ? [
-          ["/dashboard/harvest-reports", "Harvest reports", "◷"] as const,
-          ["/dashboard/availability", "Availability", "▤"] as const,
-          ["/dashboard/analytics", "Analytics", "⌁"] as const,
+          ["/dashboard/harvest-reports", "Harvest reports", "harvest"] as const,
+          ["/dashboard/availability", "Availability", "availability"] as const,
+          ["/dashboard/analytics", "Analytics", "analytics"] as const,
         ] : []),
       ]} />
       <div className="sidebar-bottom"><div className="profile"><div className="avatar">{user.name.slice(0,1).toUpperCase()}</div><div><strong>{user.name}</strong><small>{user.roles.join(" · ").replaceAll("_", " ")}</small></div></div></div>
